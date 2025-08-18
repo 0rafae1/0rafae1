@@ -1,6 +1,6 @@
 ## Hello there! <img src="img/obi-wan.png" alt="imagem obi-wan lego" height="70">
 
-## Bem-vindo(a) ao perfil do Rafael 😁
+## Welcome to Rafael's profile 😁
 
  <div>
    <a href="https://github.com/0rafae1">
@@ -16,7 +16,7 @@
  
 <br>
  
-### Conexões e contato:
+### Connections and Contact:
  
 <div> 
   <a href="https://www.linkedin.com/in/orafael-sousa" target="_blank"><img src="https://img.shields.io/badge/-LinkedIn-%230077B5?style=for-the-badge&logo=invision&logoColor=white" target="_blank"></a>
