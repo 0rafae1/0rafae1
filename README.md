@@ -1,4 +1,4 @@
-## Hi there 👋
+## Hello there! <img src="img/obi-wan.png" alt="imagem obi-wan lego" height="70">
 
 ## Bem-vindo(a) ao perfil do Rafael 😁
 
@@ -16,12 +16,9 @@
  
 <br>
  
-### Me segue a gente nas redes abaixo!
+### Conexões e contato:
  
 <div> 
-  <a href="" target="_blank"><img src="https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" target="_blank"></a>
-  <a href="" target="_blank"><img src="https://img.shields.io/badge/-Instagram-%23E4405F?style=for-the-badge&logo=instagram&logoColor=white" target="_blank"></a>
- <a href="https://discord.gg/5DVhGKVf4h" target="_blank"><img src="https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white" target="_blank"></a> 
-  <a href = ""><img src="https://img.shields.io/badge/-Gmail-%23333?style=for-the-badge&logo=gmail&logoColor=white" target="_blank"></a>
-  <a href="https://www.linkedin.com/in/orafael-sousa" target="_blank"><img src="https://img.shields.io/badge/-LinkedIn-%230077B5?style=for-the-badge&logo=linkedin&logoColor=white" target="_blank"></a>
+  <a href="https://www.linkedin.com/in/orafael-sousa" target="_blank"><img src="https://img.shields.io/badge/-LinkedIn-%230077B5?style=for-the-badge&logo=invision&logoColor=white" target="_blank"></a>
+  <a href = "mailto:rafaeltowork.outlook.com"><img src="https://img.shields.io/badge/-Outlook-%23333?style=for-the-badge&logo=mailboxdotorg&logoColor=white" target="_blank"></a> 
 </div>
