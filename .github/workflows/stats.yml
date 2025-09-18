@@ -14,30 +14,46 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.PAT_1 }}  # 🔑 USA O PAT AQUI
+          token: ${{ secrets.PAT_1 }}
 
       - name: Create assets directory
         run: mkdir -p assets
 
-      - name: Generate Simple Stats SVG
+      - name: Generate Stats SVG with dynamic date
         run: |
-          # Cria SVG simples para estatísticas
+          # Cria SVG com JavaScript para data dinâmica
           cat > assets/github-stats.svg << 'EOF'
-          <svg xmlns="http://www.w3.org/2000/svg" width="400" height="200">
-            <rect width="400" height="200" fill="#24292e"/>
-            <text x="20" y="40" fill="#fff" font-family="Arial" font-size="16">GitHub Stats for 0rafae1</text>
-            <text x="20" y="80" fill="#58a6ff" font-family="Arial" font-size="14">Updated: $(date +'%Y-%m-%d')</text>
-            <text x="20" y="120" fill="#fff" font-family="Arial" font-size="12">Generated via GitHub Actions</text>
+          <svg xmlns="http://www.w3.org/2000/svg" width="450" height="200">
+            <style>
+              .title { fill: #fff; font-family: Arial; font-size: 20px; font-weight: bold; }
+              .subtitle { fill: #58a6ff; font-family: Arial; font-size: 14px; }
+              .footer { fill: #8b949e; font-family: Arial; font-size: 12px; }
+            </style>
+            <rect width="450" height="200" fill="#24292e"/>
+            <text x="20" y="40" class="title">GitHub Stats for 0rafae1</text>
+            <text x="20" y="80" class="subtitle">Updated: <tspan id="currentDate"></tspan></text>
+            <text x="20" y="120" class="footer">Generated via GitHub Actions</text>
+            <script>
+              document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
+            </script>
           </svg>
           EOF
 
-          # Cria SVG simples para linguagens
+          # Cria SVG para linguagens
           cat > assets/github-langs.svg << 'EOF'
-          <svg xmlns="http://www.w3.org/2000/svg" width="400" height="200">
-            <rect width="400" height="200" fill="#24292e"/>
-            <text x="20" y="40" fill="#fff" font-family="Arial" font-size="16">Top Languages</text>
-            <text x="20" y="80" fill="#58a6ff" font-family="Arial" font-size="14">JavaScript, HTML, CSS</text>
-            <text x="20" y="120" fill="#fff" font-family="Arial" font-size="12">Updated: $(date +'%Y-%m-%d')</text>
+          <svg xmlns="http://www.w3.org/2000/svg" width="450" height="200">
+            <style>
+              .title { fill: #fff; font-family: Arial; font-size: 20px; font-weight: bold; }
+              .lang { fill: #58a6ff; font-family: Arial; font-size: 16px; }
+              .footer { fill: #8b949e; font-family: Arial; font-size: 12px; }
+            </style>
+            <rect width="450" height="200" fill="#24292e"/>
+            <text x="20" y="40" class="title">Top Languages</text>
+            <text x="20" y="80" class="lang">JavaScript, HTML, CSS</text>
+            <text x="20" y="120" class="footer">Updated: <tspan id="currentDate"></tspan></text>
+            <script>
+              document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
+            </script>
           </svg>
           EOF
 
@@ -46,5 +62,5 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add assets/
-          git diff --staged --quiet || git commit -m "chore: update github stats"
+          git diff --staged --quiet || git commit -m "feat: add dynamic date to stats SVGs"
           git push
