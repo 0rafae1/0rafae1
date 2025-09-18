@@ -13,15 +13,14 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_1 }}  # 🔑 USA O PAT AQUI
 
       - name: Create assets directory
         run: mkdir -p assets
 
       - name: Generate Simple Stats SVG
         run: |
-          # Cria a pasta assets se não existir
-          mkdir -p assets
-          
           # Cria SVG simples para estatísticas
           cat > assets/github-stats.svg << 'EOF'
           <svg xmlns="http://www.w3.org/2000/svg" width="400" height="200">
