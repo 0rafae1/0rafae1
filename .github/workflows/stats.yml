@@ -14,23 +14,33 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Generate Stats with API
-        run: |
-          # Baixa as estatísticas via API com autenticação
-          curl -s "https://api.github.com/users/0rafae1/repos?per_page=100" \
-            -H "Authorization: token ${{ secrets.PAT_1 }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            > repos.json
+      - name: Create assets directory
+        run: mkdir -p assets
 
-      - name: Create SVG Stats (Exemplo simplificado)
+      - name: Generate Simple Stats SVG
         run: |
-          # Cria um SVG simples com as estatísticas
-          echo '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200">
+          # Cria a pasta assets se não existir
+          mkdir -p assets
+          
+          # Cria SVG simples para estatísticas
+          cat > assets/github-stats.svg << 'EOF'
+          <svg xmlns="http://www.w3.org/2000/svg" width="400" height="200">
             <rect width="400" height="200" fill="#24292e"/>
             <text x="20" y="40" fill="#fff" font-family="Arial" font-size="16">GitHub Stats for 0rafae1</text>
-            <text x="20" y="80" fill="#58a6ff" font-family="Arial" font-size="14">Generated via GitHub Actions</text>
-            <text x="20" y="120" fill="#fff" font-family="Arial" font-size="12">Updated: $(date +"%Y-%m-%d %H:%M")</text>
-          </svg>' > assets/github-stats.svg
+            <text x="20" y="80" fill="#58a6ff" font-family="Arial" font-size="14">Updated: $(date +'%Y-%m-%d')</text>
+            <text x="20" y="120" fill="#fff" font-family="Arial" font-size="12">Generated via GitHub Actions</text>
+          </svg>
+          EOF
+
+          # Cria SVG simples para linguagens
+          cat > assets/github-langs.svg << 'EOF'
+          <svg xmlns="http://www.w3.org/2000/svg" width="400" height="200">
+            <rect width="400" height="200" fill="#24292e"/>
+            <text x="20" y="40" fill="#fff" font-family="Arial" font-size="16">Top Languages</text>
+            <text x="20" y="80" fill="#58a6ff" font-family="Arial" font-size="14">JavaScript, HTML, CSS</text>
+            <text x="20" y="120" fill="#fff" font-family="Arial" font-size="12">Updated: $(date +'%Y-%m-%d')</text>
+          </svg>
+          EOF
 
       - name: Commit and Push results
         run: |
