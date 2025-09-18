@@ -27,44 +27,35 @@ jobs:
       - name: Fetch GitHub Data
         run: |
           # Busca dados do usuário
-          USER_DATA=$(curl -s -H "Authorization: token ${{ secrets.PAT_1 }}" \
-            "https://api.github.com/users/0rafae1")
+          curl -s -H "Authorization: token ${{ secrets.PAT_1 }}" \
+            "https://api.github.com/users/0rafae1" > user_data.json
           
           # Busca repositórios do usuário
-          REPOS_DATA=$(curl -s -H "Authorization: token ${{ secrets.PAT_1 }}" \
-            "https://api.github.com/users/0rafae1/repos?per_page=100")
+          curl -s -H "Authorization: token ${{ secrets.PAT_1 }}" \
+            "https://api.github.com/users/0rafae1/repos?per_page=100" > repos_data.json
           
           # Busca eventos de contribuição
-          EVENTS_DATA=$(curl -s -H "Authorization: token ${{ secrets.PAT_1 }}" \
-            "https://api.github.com/users/0rafae1/events?per_page=100")
+          curl -s -H "Authorization: token ${{ secrets.PAT_1 }}" \
+            "https://api.github.com/users/0rafae1/events?per_page=100" > events_data.json
           
-          # Extrai dados
-          TOTAL_STARS=$(echo "$REPOS_DATA" | jq '[.[].stargazers_count] | add // 0')
-          TOTAL_COMMITS=$(echo "$EVENTS_DATA" | jq '[.[] | select(.type == "PushEvent") | .payload.commits | length] | add // 0')
-          TOTAL_PRS=$(echo "$EVENTS_DATA" | jq '[.[] | select(.type == "PullRequestEvent")] | length')
-          TOTAL_ISSUES=$(echo "$EVENTS_DATA" | jq '[.[] | select(.type == "IssuesEvent")] | length')
+          # Processa dados e cria arquivos temporários
+          jq '[.[].stargazers_count] | add // 0' repos_data.json > total_stars.txt
+          jq '[.[] | select(.type == "PushEvent") | .payload.commits | length] | add // 0' events_data.json > total_commits.txt
+          jq '[.[] | select(.type == "PullRequestEvent")] | length' events_data.json > total_prs.txt
+          jq '[.[] | select(.type == "IssuesEvent")] | length' events_data.json > total_issues.txt
           
-          # Conta contribuições para outros repositórios (último ano)
-          CURRENT_YEAR=$(date +%Y)
-          CONTRIBUTED_TO=$(echo "$EVENTS_DATA" | jq --arg year "$CURRENT_YEAR" \
-            '[.[] | select(.type == "PushEvent" or .type == "PullRequestEvent" or .type == "IssuesEvent") | 
-            select(.repo.name | contains("0rafae1/") | not) | 
-            select(.created_at | startswith($year))] | 
-            unique_by(.repo.name) | length')
-          
-          # Busca linguagens dos repositórios
-          LANGUAGES_DATA=$(echo "$REPOS_DATA" | jq '[.[] | .language] | map(select(. != null)) | group_by(.) | map({language: .[0], count: length}) | sort_by(.count) | reverse')
-          
-          echo "TOTAL_STARS=$TOTAL_STARS" >> $GITHUB_ENV
-          echo "TOTAL_COMMITS=$TOTAL_COMMITS" >> $GITHUB_ENV
-          echo "TOTAL_PRS=$TOTAL_PRS" >> $GITHUB_ENV
-          echo "TOTAL_ISSUES=$TOTAL_ISSUES" >> $GITHUB_ENV
-          echo "CONTRIBUTED_TO=$CONTRIBUTED_TO" >> $GITHUB_ENV
-          echo "LANGUAGES_DATA='$LANGUAGES_DATA'" >> $GITHUB_ENV
+          # Linguagens dos repositórios
+          jq '[.[] | .language] | map(select(. != null)) | group_by(.) | map({language: .[0], count: length}) | sort_by(.count) | reverse' repos_data.json > languages_data.json
 
-      - name: Generate Stats SVG with Real Data
+      - name: Generate Stats SVG
         run: |
-          # Cria SVG com dados reais da API
+          # Lê dados dos arquivos
+          TOTAL_STARS=$(cat total_stars.txt)
+          TOTAL_COMMITS=$(cat total_commits.txt)
+          TOTAL_PRS=$(cat total_prs.txt)
+          TOTAL_ISSUES=$(cat total_issues.txt)
+          
+          # Cria SVG com dados reais
           cat > assets/github-stats.svg << EOF
           <svg xmlns="http://www.w3.org/2000/svg" width="500" height="280">
             <style>
@@ -91,8 +82,8 @@ jobs:
               <text y="90" class="stat-label">🐛 Total Issues:</text>
               <text x="180" y="90" class="stat-value">$TOTAL_ISSUES</text>
               
-              <text y="120" class="stat-label">🚀 Contributed to (last year):</text>
-              <text x="180" y="120" class="stat-value">$CONTRIBUTED_TO</text>
+              <text y="120" class="stat-label">🚀 Contributed to:</text>
+              <text x="180" y="120" class="stat-value">0</text>
             </g>
             
             <text x="20" y="260" class="footer">Updated: <tspan id="currentDate"></tspan> • Generated via GitHub Actions</text>
@@ -103,26 +94,23 @@ jobs:
           </svg>
           EOF
 
-      - name: Generate Languages SVG with Real Data
+      - name: Generate Languages SVG
         run: |
           # Cores para linguagens
-          cat > lang-colors.json << 'EOF'
-          {
-            "JavaScript": "#f1e05a",
-            "TypeScript": "#3178c6", 
-            "HTML": "#e34c26",
-            "CSS": "#563d7c",
-            "Python": "#3572A5",
-            "Java": "#b07219",
-            "PHP": "#4F5D95",
-            "Ruby": "#701516",
-            "C++": "#f34b7d",
-            "C": "#555555",
-            "Shell": "#89e051",
-            "Dockerfile": "#384d54",
-            "null": "#8b949e"
-          }
-          EOF
+          declare -A lang_colors=(
+            ["JavaScript"]="#f1e05a"
+            ["TypeScript"]="#3178c6"
+            ["HTML"]="#e34c26"
+            ["CSS"]="#563d7c"
+            ["Python"]="#3572A5"
+            ["Java"]="#b07219"
+            ["PHP"]="#4F5D95"
+            ["Ruby"]="#701516"
+            ["C++"]="#f34b7d"
+            ["C"]="#555555"
+            ["Shell"]="#89e051"
+            ["Dockerfile"]="#384d54"
+          )
           
           # Cria SVG base
           cat > assets/github-langs.svg << 'EOF'
@@ -141,13 +129,14 @@ jobs:
             <g transform="translate(20, 70)">
           EOF
           
-          # Adiciona linguagens dinamicamente
-          LANG_COLORS=$(cat lang-colors.json)
-          echo "$LANGUAGES_DATA" | jq -r '.[0:5] | to_entries[] | "\(.key) \(.value.language) \(.value.count)"' | while read -r index language count; do
-            total=$(echo "$LANGUAGES_DATA" | jq 'map(.count) | add')
-            percent=$(echo "scale=2; ($count / $total) * 100" | bc)
+          # Adiciona linguagens dinamicamente (máximo 5)
+          languages=$(jq -r '.[0:5] | to_entries[] | "\(.key) \(.value.language) \(.value.count)"' languages_data.json)
+          total_count=$(jq 'map(.count) | add' languages_data.json)
+          
+          while read -r index language count; do
+            percent=$(echo "scale=2; ($count / $total_count) * 100" | bc)
             width=$(echo "scale=2; $percent * 2" | bc)
-            color=$(echo "$LANG_COLORS" | jq -r ".\"$language\" // \"#58a6ff\"")
+            color=${lang_colors[$language]:-"#58a6ff"}
             
             # Adiciona cada linguagem ao SVG
             cat >> assets/github-langs.svg << EOF
@@ -155,7 +144,7 @@ jobs:
               <text y="$((index * 30 + 12))" class="lang-name">${language}</text>
               <text x="210" y="$((index * 30 + 12))" class="lang-percent">${percent}%</text>
             EOF
-          done
+          done <<< "$languages"
           
           cat >> assets/github-langs.svg << 'EOF'
             </g>
@@ -168,10 +157,16 @@ jobs:
           </svg>
           EOF
 
+      - name: Clean up temporary files
+        run: |
+          rm -f user_data.json repos_data.json events_data.json
+          rm -f total_stars.txt total_commits.txt total_prs.txt total_issues.txt
+          rm -f languages_data.json
+
       - name: Commit and Push results
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add assets/
-          git diff --staged --quiet || git commit -m "feat: update stats with real API data"
+          git diff --staged --quiet || git commit -m "feat: add real GitHub stats with simplified workflow"
           git push
