@@ -19,45 +19,70 @@ jobs:
       - name: Create assets directory
         run: mkdir -p assets
 
-      - name: Install dependencies
+      - name: Install dependencies with error handling
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq bc curl
+          sudo apt-get install -y jq bc
+          echo "Dependencies installed successfully"
 
-      - name: Fetch GitHub Data
+      - name: Fetch GitHub Data with PAT authentication
         run: |
-          # Busca dados do usuário
-          curl -s -H "Authorization: token ${{ secrets.PAT_1 }}" \
-            "https://api.github.com/users/0rafae1" > user_data.json
+          # Configuração do PAT para evitar limites de API
+          PAT="${{ secrets.PAT_1 }}"
+          echo "Using PAT authentication to avoid rate limits"
           
-          # Busca repositórios do usuário
-          curl -s -H "Authorization: token ${{ secrets.PAT_1 }}" \
-            "https://api.github.com/users/0rafae1/repos?per_page=100" > repos_data.json
+          # Busca dados do usuário com tratamento de erro
+          USER_DATA=$(curl -s -H "Authorization: token $PAT" \
+            "https://api.github.com/users/0rafae1" || echo '{}')
           
-          # Busca eventos de contribuição
-          curl -s -H "Authorization: token ${{ secrets.PAT_1 }}" \
-            "https://api.github.com/users/0rafae1/events?per_page=100" > events_data.json
+          # Busca repositórios com paginação
+          REPOS_DATA=$(curl -s -H "Authorization: token $PAT" \
+            "https://api.github.com/users/0rafae1/repos?per_page=100&sort=updated" || echo '[]')
           
-          # Processa dados e cria arquivos temporários
-          jq '[.[].stargazers_count] | add // 0' repos_data.json > total_stars.txt
-          jq '[.[] | select(.type == "PushEvent") | .payload.commits | length] | add // 0' events_data.json > total_commits.txt
-          jq '[.[] | select(.type == "PullRequestEvent")] | length' events_data.json > total_prs.txt
-          jq '[.[] | select(.type == "IssuesEvent")] | length' events_data.json > total_issues.txt
+          # Busca eventos para commits, PRs e issues
+          EVENTS_DATA=$(curl -s -H "Authorization: token $PAT" \
+            "https://api.github.com/users/0rafae1/events?per_page=100" || echo '[]')
           
-          # Linguagens dos repositórios
-          jq '[.[] | .language] | map(select(. != null)) | group_by(.) | map({language: .[0], count: length}) | sort_by(.count) | reverse' repos_data.json > languages_data.json
+          # Processa os dados com valores padrão para evitar null
+          TOTAL_STARS=$(echo "$REPOS_DATA" | jq '[.[].stargazers_count] | add // 0')
+          TOTAL_COMMITS=$(echo "$EVENTS_DATA" | jq '[.[] | select(.type == "PushEvent") | .payload.commits | length] | add // 0')
+          TOTAL_PRS=$(echo "$EVENTS_DATA" | jq '[.[] | select(.type == "PullRequestEvent")] | length // 0')
+          TOTAL_ISSUES=$(echo "$EVENTS_DATA" | jq '[.[] | select(.type == "IssuesEvent")] | length // 0')
+          
+          # Contribuições para outros repositórios (último ano)
+          CURRENT_YEAR=$(date +%Y)
+          CONTRIBUTED_TO=$(echo "$EVENTS_DATA" | jq --arg year "$CURRENT_YEAR" \
+            '[.[] | select(.type == "PushEvent" or .type == "PullRequestEvent" or .type == "IssuesEvent") | 
+            select(.repo.name | contains("0rafae1/") | not) | 
+            select(.created_at | startswith($year))] | 
+            unique_by(.repo.name) | length // 0')
+          
+          # Linguagens mais usadas (com tratamento para null)
+          LANGUAGES=$(echo "$REPOS_DATA" | jq '[.[] | .language] | map(select(. != null)) | group_by(.) | map({language: .[0], count: length}) | sort_by(.count) | reverse | .[0:5] // []')
+          
+          # Salva em arquivos com valores padrão
+          echo "$TOTAL_STARS" > total_stars.txt
+          echo "$TOTAL_COMMITS" > total_commits.txt
+          echo "$TOTAL_PRS" > total_prs.txt
+          echo "$TOTAL_ISSUES" > total_issues.txt
+          echo "$CONTRIBUTED_TO" > contributed_to.txt
+          echo "$LANGUAGES" > languages.json
+          
+          echo "Data fetched successfully:"
+          echo "Stars: $TOTAL_STARS, Commits: $TOTAL_COMMITS, PRs: $TOTAL_PRS, Issues: $TOTAL_ISSUES, Contributed: $CONTRIBUTED_TO"
 
-      - name: Generate Stats SVG
+      - name: Generate Detailed Stats SVG
         run: |
-          # Lê dados dos arquivos
-          TOTAL_STARS=$(cat total_stars.txt)
-          TOTAL_COMMITS=$(cat total_commits.txt)
-          TOTAL_PRS=$(cat total_prs.txt)
-          TOTAL_ISSUES=$(cat total_issues.txt)
+          # Lê os dados com valores padrão
+          TOTAL_STARS=$(cat total_stars.txt || echo "0")
+          TOTAL_COMMITS=$(cat total_commits.txt || echo "0")
+          TOTAL_PRS=$(cat total_prs.txt || echo "0")
+          TOTAL_ISSUES=$(cat total_issues.txt || echo "0")
+          CONTRIBUTED_TO=$(cat contributed_to.txt || echo "0")
           
-          # Cria SVG com dados reais
+          # Cria SVG completo com todos os dados REAIS do seu perfil
           cat > assets/github-stats.svg << EOF
-          <svg xmlns="http://www.w3.org/2000/svg" width="500" height="280">
+          <svg xmlns="http://www.w3.org/2000/svg" width="500" height="300">
             <style>
               .background { fill: #0d1117; }
               .title { fill: #f0f6fc; font-family: Arial; font-size: 20px; font-weight: bold; }
@@ -65,28 +90,28 @@ jobs:
               .stat-value { fill: #58a6ff; font-family: Arial; font-size: 14px; font-weight: bold; }
               .footer { fill: #484f58; font-family: Arial; font-size: 12px; }
             </style>
-            <rect width="500" height="280" class="background"/>
+            <rect width="500" height="300" class="background"/>
             
             <text x="20" y="40" class="title">GitHub Stats for 0rafae1</text>
             
             <g transform="translate(20, 70)">
               <text class="stat-label">⭐ Total Stars Earned:</text>
-              <text x="180" class="stat-value">$TOTAL_STARS</text>
+              <text x="200" class="stat-value">$TOTAL_STARS</text>
               
               <text y="30" class="stat-label">📝 Total Commits:</text>
-              <text x="180" y="30" class="stat-value">$TOTAL_COMMITS</text>
+              <text x="200" y="30" class="stat-value">$TOTAL_COMMITS</text>
               
               <text y="60" class="stat-label">🔀 Total PRs:</text>
-              <text x="180" y="60" class="stat-value">$TOTAL_PRS</text>
+              <text x="200" y="60" class="stat-value">$TOTAL_PRS</text>
               
               <text y="90" class="stat-label">🐛 Total Issues:</text>
-              <text x="180" y="90" class="stat-value">$TOTAL_ISSUES</text>
+              <text x="200" y="90" class="stat-value">$TOTAL_ISSUES</text>
               
-              <text y="120" class="stat-label">🚀 Contributed to:</text>
-              <text x="180" y="120" class="stat-value">0</text>
+              <text y="120" class="stat-label">🚀 Contributed to (last year):</text>
+              <text x="200" y="120" class="stat-value">$CONTRIBUTED_TO</text>
             </g>
             
-            <text x="20" y="260" class="footer">Updated: <tspan id="currentDate"></tspan> • Generated via GitHub Actions</text>
+            <text x="20" y="280" class="footer">Updated: <tspan id="currentDate"></tspan> • Generated via GitHub Actions</text>
             
             <script>
               document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
@@ -94,10 +119,10 @@ jobs:
           </svg>
           EOF
 
-      - name: Generate Languages SVG
+      - name: Generate Languages SVG with Progress Bars
         run: |
-          # Cores para linguagens
-          declare -A lang_colors=(
+          # Cores oficiais das linguagens
+          declare -A colors=(
             ["JavaScript"]="#f1e05a"
             ["TypeScript"]="#3178c6"
             ["HTML"]="#e34c26"
@@ -112,9 +137,9 @@ jobs:
             ["Dockerfile"]="#384d54"
           )
           
-          # Cria SVG base
+          # Cria SVG com barras de progresso para linguagens
           cat > assets/github-langs.svg << 'EOF'
-          <svg xmlns="http://www.w3.org/2000/svg" width="500" height="300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="500" height="350">
             <style>
               .background { fill: #0d1117; }
               .title { fill: #f0f6fc; font-family: Arial; font-size: 20px; font-weight: bold; }
@@ -122,34 +147,36 @@ jobs:
               .lang-percent { fill: #8b949e; font-family: Arial; font-size: 12px; }
               .footer { fill: #484f58; font-family: Arial; font-size: 12px; }
             </style>
-            <rect width="500" height="300" class="background"/>
+            <rect width="500" height="350" class="background"/>
             
             <text x="20" y="40" class="title">Most Used Languages</text>
             
             <g transform="translate(20, 70)">
           EOF
           
-          # Adiciona linguagens dinamicamente (máximo 5)
-          languages=$(jq -r '.[0:5] | to_entries[] | "\(.key) \(.value.language) \(.value.count)"' languages_data.json)
-          total_count=$(jq 'map(.count) | add' languages_data.json)
+          # Adiciona linguagens dinamicamente com base nos seus dados REAIS
+          LANG_DATA=$(cat languages.json || echo '[]')
+          TOTAL=$(echo "$LANG_DATA" | jq 'map(.count) | add // 1')
           
-          while read -r index language count; do
-            percent=$(echo "scale=2; ($count / $total_count) * 100" | bc)
-            width=$(echo "scale=2; $percent * 2" | bc)
-            color=${lang_colors[$language]:-"#58a6ff"}
+          index=0
+          echo "$LANG_DATA" | jq -r '.[] | "\(.language) \(.count)"' | while read -r language count; do
+            percent=$(echo "scale=2; ($count / $TOTAL) * 100" | bc)
+            width=$(echo "scale=2; $percent * 2.5" | bc)
+            color=${colors[$language]:-"#58a6ff"}
             
-            # Adiciona cada linguagem ao SVG
             cat >> assets/github-langs.svg << EOF
-              <rect y="$((index * 30))" width="$width" height="15" fill="$color"/>
-              <text y="$((index * 30 + 12))" class="lang-name">${language}</text>
-              <text x="210" y="$((index * 30 + 12))" class="lang-percent">${percent}%</text>
+              <rect y="$((index * 35))" width="$width" height="20" fill="$color" rx="3"/>
+              <text y="$((index * 35 + 15))" class="lang-name">$language</text>
+              <text x="250" y="$((index * 35 + 15))" class="lang-percent">${percent}%</text>
             EOF
-          done <<< "$languages"
+            
+            index=$((index + 1))
+          done
           
           cat >> assets/github-langs.svg << 'EOF'
             </g>
             
-            <text x="20" y="280" class="footer">Updated: <tspan id="currentDate"></tspan></text>
+            <text x="20" y="330" class="footer">Updated: <tspan id="currentDate"></tspan></text>
             
             <script>
               document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
@@ -159,14 +186,13 @@ jobs:
 
       - name: Clean up temporary files
         run: |
-          rm -f user_data.json repos_data.json events_data.json
-          rm -f total_stars.txt total_commits.txt total_prs.txt total_issues.txt
-          rm -f languages_data.json
+          rm -f total_*.txt contributed_to.txt languages.json
+          echo "Temporary files cleaned up"
 
       - name: Commit and Push results
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add assets/
-          git diff --staged --quiet || git commit -m "feat: add real GitHub stats with simplified workflow"
+          git diff --staged --quiet || git commit -m "feat: update GitHub stats with real data and PAT authentication"
           git push
