@@ -5,7 +5,7 @@ on:
     branches: ["main"]
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * *"  # Executa diariamente à meia-noite
+    - cron: "0 0 * * *"
 
 jobs:
   generate-stats:
@@ -13,30 +13,29 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PAT_1 }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
+      - name: Generate Stats with API
         run: |
-          npm install -g github-readme-stats
+          # Baixa as estatísticas via API com autenticação
+          curl -s "https://api.github.com/users/0rafae1/repos?per_page=100" \
+            -H "Authorization: token ${{ secrets.PAT_1 }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            > repos.json
 
-      - name: Generate GitHub Stats
+      - name: Create SVG Stats (Exemplo simplificado)
         run: |
-          github-readme-stats --token ${{ secrets.PAT_1 }} --username 0rafae1 --show-icons true --include-all-commits true --count-private true --theme tokyonight --output-dir assets --file-name github-stats.svg
-
-      - name: Generate Top Languages Card
-        run: |
-          github-readme-stats --token ${{ secrets.PAT_1 }} --username 0rafae1 --layout compact --langs-count 6 --theme tokyonight --output-dir assets --file-name github-langs.svg
+          # Cria um SVG simples com as estatísticas
+          echo '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200">
+            <rect width="400" height="200" fill="#24292e"/>
+            <text x="20" y="40" fill="#fff" font-family="Arial" font-size="16">GitHub Stats for 0rafae1</text>
+            <text x="20" y="80" fill="#58a6ff" font-family="Arial" font-size="14">Generated via GitHub Actions</text>
+            <text x="20" y="120" fill="#fff" font-family="Arial" font-size="12">Updated: $(date +"%Y-%m-%d %H:%M")</text>
+          </svg>' > assets/github-stats.svg
 
       - name: Commit and Push results
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add assets/
-          git diff --staged --quiet || git commit -m "Update GitHub stats [$(date +'%Y-%m-%d')]"
+          git diff --staged --quiet || git commit -m "chore: update github stats"
           git push
