@@ -1,0 +1,33 @@
+name: Generate GitHub Stats
+
+on:
+  schedule:
+    - cron: "0 */12 * * *" # Atualiza a cada 12h
+  workflow_dispatch: # Permite rodar manualmente
+  push:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Generate GitHub Stats
+        run: |
+          mkdir -p assets
+          curl -H "Authorization: token ${{ secrets.PAT_1 }}" \
+            -o assets/github-stats.svg \
+            "https://github-readme-stats.vercel.app/api?username=0rafae1&show_icons=true&theme=tokyonight&include_all_commits=true&count_private=true"
+          
+          curl -H "Authorization: token ${{ secrets.PAT_1 }}" \
+            -o assets/github-langs.svg \
+            "https://github-readme-stats.vercel.app/api/top-langs/?username=0rafae1&layout=compact&langs_count=6&theme=tokyonight"
+
+      - name: Commit and Push changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "Update GitHub stats"
+          file_pattern: assets/*.svg
