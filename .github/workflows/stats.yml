@@ -1,132 +1,156 @@
 name: Generate GitHub Stats
 
 on:
-    push:
-        branches: ["main"]
-    workflow_dispatch:
-    schedule:
-        - cron: "0 0 * * *"
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
 
 jobs:
-    generate-stats:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout repo
-              uses: actions/checkout@v4
-              with:
-                  token: ${{ secrets.PAT_1 }}
+  generate-stats:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_1 }}
 
-            - name: Create assets directory
-              run: mkdir -p assets
+      - name: Create assets directory
+        run: mkdir -p assets
 
-            - name: Generate Detailed Stats SVG
-              run: |
-                  # Cria SVG completo para estatísticas
-                  cat > assets/github-stats.svg << 'EOF'
-                  <svg xmlns="http://www.w3.org/2000/svg" width="500" height="280">
-                    <style>
-                      .background { fill: #0d1117; }
-                      .title { fill: #f0f6fc; font-family: Arial; font-size: 20px; font-weight: bold; }
-                      .stat-label { fill: #8b949e; font-family: Arial; font-size: 14px; }
-                      .stat-value { fill: #58a6ff; font-family: Arial; font-size: 14px; font-weight: bold; }
-                      .icon { fill: #f0f6fc; }
-                      .footer { fill: #484f58; font-family: Arial; font-size: 12px; }
-                    </style>
-                    <rect width="500" height="280" class="background"/>
-                    
-                    <!-- Título -->
-                    <text x="20" y="40" class="title">GitHub Stats for 0rafae1</text>
-                    
-                    <!-- Estatísticas com ícones -->
-                    <g transform="translate(20, 70)">
-                      <!-- Stars -->
-                      <text class="stat-label">⭐ Total Stars Earned:</text>
-                      <text x="180" class="stat-value">642</text>
-                      
-                      <!-- Commits -->
-                      <text y="30" class="stat-label">📝 Total Commits:</text>
-                      <text x="180" y="30" class="stat-value">392</text>
-                      
-                      <!-- PRs -->
-                      <text y="60" class="stat-label">🔀 Total PRs:</text>
-                      <text x="180" y="60" class="stat-value">0</text>
-                      
-                      <!-- Issues -->
-                      <text y="90" class="stat-label">🐛 Total Issues:</text>
-                      <text x="180" y="90" class="stat-value">0</text>
-                      
-                      <!-- Contributions -->
-                      <text y="120" class="stat-label">🚀 Contributed to (last year):</text>
-                      <text x="180" y="120" class="stat-value">19</text>
-                    </g>
-                    
-                    <!-- Rodapé -->
-                    <text x="20" y="260" class="footer">Updated: <tspan id="currentDate"></tspan> • Generated via GitHub Actions</text>
-                    
-                    <script>
-                      document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
-                    </script>
-                  </svg>
-                  EOF
+      - name: Fetch GitHub Data
+        run: |
+          # Busca dados do usuário
+          USER_DATA=$(curl -s -H "Authorization: token ${{ secrets.PAT_1 }}" \
+            "https://api.github.com/users/0rafae1")
+          
+          # Busca repositórios do usuário
+          REPOS_DATA=$(curl -s -H "Authorization: token ${{ secrets.PAT_1 }}" \
+            "https://api.github.com/users/0rafae1/repos?per_page=100")
+          
+          # Busca eventos de contribuição
+          EVENTS_DATA=$(curl -s -H "Authorization: token ${{ secrets.PAT_1 }}" \
+            "https://api.github.com/users/0rafae1/events?per_page=100")
+          
+          # Extrai dados
+          TOTAL_STARS=$(echo "$REPOS_DATA" | jq '[.[].stargazers_count] | add // 0')
+          TOTAL_COMMITS=$(echo "$EVENTS_DATA" | jq '[.[] | select(.type == "PushEvent") | .payload.commits | length] | add // 0')
+          TOTAL_PRS=$(echo "$EVENTS_DATA" | jq '[.[] | select(.type == "PullRequestEvent")] | length')
+          TOTAL_ISSUES=$(echo "$EVENTS_DATA" | jq '[.[] | select(.type == "IssuesEvent")] | length')
+          
+          # Conta contribuições para outros repositórios (último ano)
+          CURRENT_YEAR=$(date +%Y)
+          CONTRIBUTED_TO=$(echo "$EVENTS_DATA" | jq --arg year "$CURRENT_YEAR" \
+            '[.[] | select(.type == "PushEvent" or .type == "PullRequestEvent" or .type == "IssuesEvent") | 
+            select(.repo.name | contains("0rafae1/") | not) | 
+            select(.created_at | startswith($year))] | 
+            unique_by(.repo.name) | length')
+          
+          # Busca linguagens dos repositórios
+          LANGUAGES_DATA=$(echo "$REPOS_DATA" | jq '[.[] | .language] | map(select(. != null)) | group_by(.) | map({language: .[0], count: length}) | sort_by(.count) | reverse')
+          
+          echo "TOTAL_STARS=$TOTAL_STARS" >> $GITHUB_ENV
+          echo "TOTAL_COMMITS=$TOTAL_COMMITS" >> $GITHUB_ENV
+          echo "TOTAL_PRS=$TOTAL_PRS" >> $GITHUB_ENV
+          echo "TOTAL_ISSUES=$TOTAL_ISSUES" >> $GITHUB_ENV
+          echo "CONTRIBUTED_TO=$CONTRIBUTED_TO" >> $GITHUB_ENV
+          echo "LANGUAGES_DATA='$LANGUAGES_DATA'" >> $GITHUB_ENV
 
-            - name: Generate Languages SVG with bars
-              run: |
-                  # Cria SVG para linguagens com barras coloridas
-                  cat > assets/github-langs.svg << 'EOF'
-                  <svg xmlns="http://www.w3.org/2000/svg" width="500" height="300">
-                    <style>
-                      .background { fill: #0d1117; }
-                      .title { fill: #f0f6fc; font-family: Arial; font-size: 20px; font-weight: bold; }
-                      .lang-name { fill: #f0f6fc; font-family: Arial; font-size: 14px; }
-                      .lang-percent { fill: #8b949e; font-family: Arial; font-size: 12px; }
-                      .footer { fill: #484f58; font-family: Arial; font-size: 12px; }
-                    </style>
-                    <rect width="500" height="300" class="background"/>
-                    
-                    <!-- Título -->
-                    <text x="20" y="40" class="title">Most Used Languages</text>
-                    
-                    <!-- Barras de linguagens -->
-                    <g transform="translate(20, 70)">
-                      <!-- HTML -->
-                      <rect width="200" height="15" fill="#e34c26"/>
-                      <text y="12" class="lang-name">📄 HTML</text>
-                      <text x="210" y="12" class="lang-percent">40.54%</text>
-                      
-                      <!-- CSS -->
-                      <rect y="30" width="163" height="15" fill="#563d7c"/>
-                      <text y="42" class="lang-name">🎨 CSS</text>
-                      <text x="210" y="42" class="lang-percent">33.00%</text>
-                      
-                      <!-- JavaScript -->
-                      <rect y="60" width="118" height="15" fill="#f1e05a"/>
-                      <text y="72" class="lang-name">⚡ JavaScript</text>
-                      <text x="210" y="72" class="lang-percent">23.83%</text>
-                      
-                      <!-- TypeScript -->
-                      <rect y="90" width="8" height="15" fill="#3178c6"/>
-                      <text y="102" class="lang-name">🔷 TypeScript</text>
-                      <text x="210" y="102" class="lang-percent">1.65%</text>
-                      
-                      <!-- Docker -->
-                      <rect y="120" width="1" height="15" fill="#384d54"/>
-                      <text y="132" class="lang-name">🐳 Dockerfile</text>
-                      <text x="210" y="132" class="lang-percent">0.08%</text>
-                    </g>
-                    
-                    <!-- Rodapé -->
-                    <text x="20" y="280" class="footer">Updated: <tspan id="currentDate"></tspan></text>
-                    
-                    <script>
-                      document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
-                    </script>
-                  </svg>
-                  EOF
+      - name: Generate Stats SVG with Real Data
+        run: |
+          # Cria SVG com dados reais da API
+          cat > assets/github-stats.svg << EOF
+          <svg xmlns="http://www.w3.org/2000/svg" width="500" height="280">
+            <style>
+              .background { fill: #0d1117; }
+              .title { fill: #f0f6fc; font-family: Arial; font-size: 20px; font-weight: bold; }
+              .stat-label { fill: #8b949e; font-family: Arial; font-size: 14px; }
+              .stat-value { fill: #58a6ff; font-family: Arial; font-size: 14px; font-weight: bold; }
+              .footer { fill: #484f58; font-family: Arial; font-size: 12px; }
+            </style>
+            <rect width="500" height="280" class="background"/>
+            
+            <text x="20" y="40" class="title">GitHub Stats for 0rafae1</text>
+            
+            <g transform="translate(20, 70)">
+              <text class="stat-label">⭐ Total Stars Earned:</text>
+              <text x="180" class="stat-value">$TOTAL_STARS</text>
+              
+              <text y="30" class="stat-label">📝 Total Commits:</text>
+              <text x="180" y="30" class="stat-value">$TOTAL_COMMITS</text>
+              
+              <text y="60" class="stat-label">🔀 Total PRs:</text>
+              <text x="180" y="60" class="stat-value">$TOTAL_PRS</text>
+              
+              <text y="90" class="stat-label">🐛 Total Issues:</text>
+              <text x="180" y="90" class="stat-value">$TOTAL_ISSUES</text>
+              
+              <text y="120" class="stat-label">🚀 Contributed to (last year):</text>
+              <text x="180" y="120" class="stat-value">$CONTRIBUTED_TO</text>
+            </g>
+            
+            <text x="20" y="260" class="footer">Updated: <tspan id="currentDate"></tspan> • Generated via GitHub Actions</text>
+            
+            <script>
+              document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
+            </script>
+          </svg>
+          EOF
 
-            - name: Commit and Push results
-              run: |
-                  git config --global user.name "github-actions[bot]"
-                  git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-                  git add assets/
-                  git diff --staged --quiet || git commit -m "feat: add detailed stats with icons and progress bars"
-                  git push
+      - name: Generate Languages SVG with Real Data
+        run: |
+          # Processa linguagens e gera SVG
+          LANG_COLORS='{"JavaScript":"#f1e05a","TypeScript":"#3178c6","HTML":"#e34c26","CSS":"#563d7c","Python":"#3572A5","Java":"#b07219","PHP":"#4F5D95","Ruby":"#701516","C++":"#f34b7d","C":"#555555","Shell":"#89e051","Dockerfile":"#384d54"}'
+          
+          cat > assets/github-langs.svg << 'EOF'
+          <svg xmlns="http://www.w3.org/2000/svg" width="500" height="300">
+            <style>
+              .background { fill: #0d1117; }
+              .title { fill: #f0f6fc; font-family: Arial; font-size: 20px; font-weight: bold; }
+              .lang-name { fill: #f0f6fc; font-family: Arial; font-size: 14px; }
+              .lang-percent { fill: #8b949e; font-family: Arial; font-size: 12px; }
+              .footer { fill: #484f58; font-family: Arial; font-size: 12px; }
+            </style>
+            <rect width="500" height="300" class="background"/>
+            
+            <text x="20" y="40" class="title">Most Used Languages</text>
+            
+            <g transform="translate(20, 70)">
+          EOF
+          
+          # Adiciona linguagens dinamicamente (máximo 5)
+          echo "$LANGUAGES_DATA" | jq -r '.[0:5] | to_entries[] | "\(.key) \(.value.language) \(.value.count)"' | while read -r index language count; do
+            total=$(echo "$LANGUAGES_DATA" | jq 'map(.count) | add')
+            percent=$(echo "scale=2; ($count / $total) * 100" | bc)
+            width=$(echo "scale=2; $percent * 2" | bc)
+            color=$(echo "$LANG_COLORS" | jq -r ".${language} // \"#58a6ff\"")
+            
+            cat >> assets/github-langs.svg << EOF
+              <rect y="$((index * 30))" width="$width" height="15" fill="$color"/>
+              <text y="$((index * 30 + 12))" class="lang-name">${language}</text>
+              <text x="210" y="$((index * 30 + 12))" class="lang-percent">${percent}%</text>
+            EOF
+          done
+          
+          cat >> assets/github-langs.svg << 'EOF'
+            </g>
+            
+            <text x="20" y="280" class="footer">Updated: <tspan id="currentDate"></tspan></text>
+            
+            <script>
+              document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
+            </script>
+          </svg>
+          EOF
+
+      - name: Install jq for JSON processing
+        run: sudo apt-get install -y jq bc
+
+      - name: Commit and Push results
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/
+          git diff --staged --quiet || git commit -m "feat: update stats with real API data"
+          git push
