@@ -119,25 +119,9 @@ jobs:
           </svg>
           EOF
 
-      - name: Generate Languages SVG with Progress Bars
+      - name: Generate Languages SVG
         run: |
-          # Cores oficiais das linguagens
-          declare -A colors=(
-            ["JavaScript"]="#f1e05a"
-            ["TypeScript"]="#3178c6"
-            ["HTML"]="#e34c26"
-            ["CSS"]="#563d7c"
-            ["Python"]="#3572A5"
-            ["Java"]="#b07219"
-            ["PHP"]="#4F5D95"
-            ["Ruby"]="#701516"
-            ["C++"]="#f34b7d"
-            ["C"]="#555555"
-            ["Shell"]="#89e051"
-            ["Dockerfile"]="#384d54"
-          )
-          
-          # Cria SVG com barras de progresso para linguagens
+          # Cria arquivo SVG base para linguagens
           cat > assets/github-langs.svg << 'EOF'
           <svg xmlns="http://www.w3.org/2000/svg" width="500" height="350">
             <style>
@@ -154,16 +138,34 @@ jobs:
             <g transform="translate(20, 70)">
           EOF
           
-          # Adiciona linguagens dinamicamente com base nos seus dados REAIS
+          # Adiciona linguagens dinamicamente
           LANG_DATA=$(cat languages.json || echo '[]')
           TOTAL=$(echo "$LANG_DATA" | jq 'map(.count) | add // 1')
           
+          # Cores para linguagens
+          declare -A colors=(
+            ["JavaScript"]="#f1e05a"
+            ["TypeScript"]="#3178c6"
+            ["HTML"]="#e34c26"
+            ["CSS"]="#563d7c"
+            ["Python"]="#3572A5"
+            ["Java"]="#b07219"
+            ["PHP"]="#4F5D95"
+            ["Ruby"]="#701516"
+            ["C++"]="#f34b7d"
+            ["C"]="#555555"
+            ["Shell"]="#89e051"
+            ["Dockerfile"]="#384d54"
+          )
+          
+          # Processa cada linguagem
           index=0
           echo "$LANG_DATA" | jq -r '.[] | "\(.language) \(.count)"' | while read -r language count; do
             percent=$(echo "scale=2; ($count / $TOTAL) * 100" | bc)
             width=$(echo "scale=2; $percent * 2.5" | bc)
             color=${colors[$language]:-"#58a6ff"}
             
+            # Adiciona ao SVG
             cat >> assets/github-langs.svg << EOF
               <rect y="$((index * 35))" width="$width" height="20" fill="$color" rx="3"/>
               <text y="$((index * 35 + 15))" class="lang-name">$language</text>
@@ -173,6 +175,7 @@ jobs:
             index=$((index + 1))
           done
           
+          # Fecha o SVG
           cat >> assets/github-langs.svg << 'EOF'
             </g>
             
