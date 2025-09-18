@@ -5,42 +5,38 @@ on:
     branches: ["main"]
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 0 * * *"  # Executa diariamente à meia-noite
 
 jobs:
-  build:
+  generate-stats:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_1 }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          npm install -g github-readme-stats
 
       - name: Generate GitHub Stats
-        uses: anuraghazra/github-readme-stats@master
-        with:
-          token: ${{ secrets.PAT_1 }}
-          username: 0rafae1
-          show_icons: true
-          include_all_commits: true
-          count_private: true
-          theme: tokyonight
-          output_dir: assets
-          file_name: github-stats
+        run: |
+          github-readme-stats --token ${{ secrets.PAT_1 }} --username 0rafae1 --show-icons true --include-all-commits true --count-private true --theme tokyonight --output-dir assets --file-name github-stats.svg
 
       - name: Generate Top Languages Card
-        uses: anuraghazra/github-readme-stats@master
-        with:
-          token: ${{ secrets.PAT_1 }}
-          username: 0rafae1
-          layout: compact
-          langs_count: 6
-          theme: tokyonight
-          output_dir: assets
-          file_name: github-langs
+        run: |
+          github-readme-stats --token ${{ secrets.PAT_1 }} --username 0rafae1 --layout compact --langs-count 6 --theme tokyonight --output-dir assets --file-name github-langs.svg
 
       - name: Commit and Push results
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add assets/
-          git commit -m "update stats" || echo "no changes"
+          git diff --staged --quiet || git commit -m "Update GitHub stats [$(date +'%Y-%m-%d')]"
           git push
