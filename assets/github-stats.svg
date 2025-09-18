@@ -1,6 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200">
-  <rect width="400" height="200" fill="#24292e"/>
-  <text x="20" y="40" fill="#fff" font-family="Arial" font-size="16">GitHub Stats for 0rafae1</text>
-  <text x="20" y="80" fill="#58a6ff" font-family="Arial" font-size="14">Updated: $(date +'%Y-%m-%d')</text>
-  <text x="20" y="120" fill="#fff" font-family="Arial" font-size="12">Generated via GitHub Actions</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="450" height="200">
+  <style>
+    .title { fill: #fff; font-family: Arial; font-size: 20px; font-weight: bold; }
+    .subtitle { fill: #58a6ff; font-family: Arial; font-size: 14px; }
+    .footer { fill: #8b949e; font-family: Arial; font-size: 12px; }
+  </style>
+  <rect width="450" height="200" fill="#24292e"/>
+  <text x="20" y="40" class="title">GitHub Stats for 0rafae1</text>
+  <text x="20" y="80" class="subtitle">Updated: <tspan id="currentDate"></tspan></text>
+  <text x="20" y="120" class="footer">Generated via GitHub Actions</text>
+  <script>
+    document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
+  </script>
 </svg>
