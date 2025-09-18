@@ -4,8 +4,9 @@
 
  <div>
    <a href="https://github.com/0rafae1">
-   <img height="180em" src="https://github-readme-stats.vercel.app/api?username=0rafae1&show_icons=true&theme=tokyonight&include_all_commits=true&count_private=true"/>
-   <img height="180em" src="https://github-readme-stats.vercel.app/api/top-langs/?username=0rafae1&layout=compact&langs_count=6&theme=tokyonight"/>
+   <img height="180em" src="assets/github-stats.svg"/>
+   <img height="180em" src="assets/github-langs.svg"/>
+
 </div>
     
 <div style="display: inline_block"><br>
