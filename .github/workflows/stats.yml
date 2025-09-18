@@ -1,66 +1,132 @@
 name: Generate GitHub Stats
 
 on:
-  push:
-    branches: ["main"]
-  workflow_dispatch:
-  schedule:
-    - cron: "0 0 * * *"
+    push:
+        branches: ["main"]
+    workflow_dispatch:
+    schedule:
+        - cron: "0 0 * * *"
 
 jobs:
-  generate-stats:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PAT_1 }}
+    generate-stats:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.PAT_1 }}
 
-      - name: Create assets directory
-        run: mkdir -p assets
+            - name: Create assets directory
+              run: mkdir -p assets
 
-      - name: Generate Stats SVG with dynamic date
-        run: |
-          # Cria SVG com JavaScript para data dinâmica
-          cat > assets/github-stats.svg << 'EOF'
-          <svg xmlns="http://www.w3.org/2000/svg" width="450" height="200">
-            <style>
-              .title { fill: #fff; font-family: Arial; font-size: 20px; font-weight: bold; }
-              .subtitle { fill: #58a6ff; font-family: Arial; font-size: 14px; }
-              .footer { fill: #8b949e; font-family: Arial; font-size: 12px; }
-            </style>
-            <rect width="450" height="200" fill="#24292e"/>
-            <text x="20" y="40" class="title">GitHub Stats for 0rafae1</text>
-            <text x="20" y="80" class="subtitle">Updated: <tspan id="currentDate"></tspan></text>
-            <text x="20" y="120" class="footer">Generated via GitHub Actions</text>
-            <script>
-              document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
-            </script>
-          </svg>
-          EOF
+            - name: Generate Detailed Stats SVG
+              run: |
+                  # Cria SVG completo para estatísticas
+                  cat > assets/github-stats.svg << 'EOF'
+                  <svg xmlns="http://www.w3.org/2000/svg" width="500" height="280">
+                    <style>
+                      .background { fill: #0d1117; }
+                      .title { fill: #f0f6fc; font-family: Arial; font-size: 20px; font-weight: bold; }
+                      .stat-label { fill: #8b949e; font-family: Arial; font-size: 14px; }
+                      .stat-value { fill: #58a6ff; font-family: Arial; font-size: 14px; font-weight: bold; }
+                      .icon { fill: #f0f6fc; }
+                      .footer { fill: #484f58; font-family: Arial; font-size: 12px; }
+                    </style>
+                    <rect width="500" height="280" class="background"/>
+                    
+                    <!-- Título -->
+                    <text x="20" y="40" class="title">GitHub Stats for 0rafae1</text>
+                    
+                    <!-- Estatísticas com ícones -->
+                    <g transform="translate(20, 70)">
+                      <!-- Stars -->
+                      <text class="stat-label">⭐ Total Stars Earned:</text>
+                      <text x="180" class="stat-value">642</text>
+                      
+                      <!-- Commits -->
+                      <text y="30" class="stat-label">📝 Total Commits:</text>
+                      <text x="180" y="30" class="stat-value">392</text>
+                      
+                      <!-- PRs -->
+                      <text y="60" class="stat-label">🔀 Total PRs:</text>
+                      <text x="180" y="60" class="stat-value">0</text>
+                      
+                      <!-- Issues -->
+                      <text y="90" class="stat-label">🐛 Total Issues:</text>
+                      <text x="180" y="90" class="stat-value">0</text>
+                      
+                      <!-- Contributions -->
+                      <text y="120" class="stat-label">🚀 Contributed to (last year):</text>
+                      <text x="180" y="120" class="stat-value">19</text>
+                    </g>
+                    
+                    <!-- Rodapé -->
+                    <text x="20" y="260" class="footer">Updated: <tspan id="currentDate"></tspan> • Generated via GitHub Actions</text>
+                    
+                    <script>
+                      document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
+                    </script>
+                  </svg>
+                  EOF
 
-          # Cria SVG para linguagens
-          cat > assets/github-langs.svg << 'EOF'
-          <svg xmlns="http://www.w3.org/2000/svg" width="450" height="200">
-            <style>
-              .title { fill: #fff; font-family: Arial; font-size: 20px; font-weight: bold; }
-              .lang { fill: #58a6ff; font-family: Arial; font-size: 16px; }
-              .footer { fill: #8b949e; font-family: Arial; font-size: 12px; }
-            </style>
-            <rect width="450" height="200" fill="#24292e"/>
-            <text x="20" y="40" class="title">Top Languages</text>
-            <text x="20" y="80" class="lang">JavaScript, HTML, CSS</text>
-            <text x="20" y="120" class="footer">Updated: <tspan id="currentDate"></tspan></text>
-            <script>
-              document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
-            </script>
-          </svg>
-          EOF
+            - name: Generate Languages SVG with bars
+              run: |
+                  # Cria SVG para linguagens com barras coloridas
+                  cat > assets/github-langs.svg << 'EOF'
+                  <svg xmlns="http://www.w3.org/2000/svg" width="500" height="300">
+                    <style>
+                      .background { fill: #0d1117; }
+                      .title { fill: #f0f6fc; font-family: Arial; font-size: 20px; font-weight: bold; }
+                      .lang-name { fill: #f0f6fc; font-family: Arial; font-size: 14px; }
+                      .lang-percent { fill: #8b949e; font-family: Arial; font-size: 12px; }
+                      .footer { fill: #484f58; font-family: Arial; font-size: 12px; }
+                    </style>
+                    <rect width="500" height="300" class="background"/>
+                    
+                    <!-- Título -->
+                    <text x="20" y="40" class="title">Most Used Languages</text>
+                    
+                    <!-- Barras de linguagens -->
+                    <g transform="translate(20, 70)">
+                      <!-- HTML -->
+                      <rect width="200" height="15" fill="#e34c26"/>
+                      <text y="12" class="lang-name">📄 HTML</text>
+                      <text x="210" y="12" class="lang-percent">40.54%</text>
+                      
+                      <!-- CSS -->
+                      <rect y="30" width="163" height="15" fill="#563d7c"/>
+                      <text y="42" class="lang-name">🎨 CSS</text>
+                      <text x="210" y="42" class="lang-percent">33.00%</text>
+                      
+                      <!-- JavaScript -->
+                      <rect y="60" width="118" height="15" fill="#f1e05a"/>
+                      <text y="72" class="lang-name">⚡ JavaScript</text>
+                      <text x="210" y="72" class="lang-percent">23.83%</text>
+                      
+                      <!-- TypeScript -->
+                      <rect y="90" width="8" height="15" fill="#3178c6"/>
+                      <text y="102" class="lang-name">🔷 TypeScript</text>
+                      <text x="210" y="102" class="lang-percent">1.65%</text>
+                      
+                      <!-- Docker -->
+                      <rect y="120" width="1" height="15" fill="#384d54"/>
+                      <text y="132" class="lang-name">🐳 Dockerfile</text>
+                      <text x="210" y="132" class="lang-percent">0.08%</text>
+                    </g>
+                    
+                    <!-- Rodapé -->
+                    <text x="20" y="280" class="footer">Updated: <tspan id="currentDate"></tspan></text>
+                    
+                    <script>
+                      document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
+                    </script>
+                  </svg>
+                  EOF
 
-      - name: Commit and Push results
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/
-          git diff --staged --quiet || git commit -m "feat: add dynamic date to stats SVGs"
-          git push
+            - name: Commit and Push results
+              run: |
+                  git config --global user.name "github-actions[bot]"
+                  git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git add assets/
+                  git diff --staged --quiet || git commit -m "feat: add detailed stats with icons and progress bars"
+                  git push
