@@ -121,8 +121,8 @@ jobs:
 
       - name: Generate Languages SVG
         run: |
-          # Cria arquivo SVG base para linguagens
-          cat > assets/github-langs.svg << 'EOF'
+          # Cria o SVG base primeiro
+          cat > assets/github-langs.svg << 'EOL'
           <svg xmlns="http://www.w3.org/2000/svg" width="500" height="350">
             <style>
               .background { fill: #0d1117; }
@@ -136,7 +136,7 @@ jobs:
             <text x="20" y="40" class="title">Most Used Languages</text>
             
             <g transform="translate(20, 70)">
-          EOF
+          EOL
           
           # Adiciona linguagens dinamicamente
           LANG_DATA=$(cat languages.json || echo '[]')
@@ -165,18 +165,16 @@ jobs:
             width=$(echo "scale=2; $percent * 2.5" | bc)
             color=${colors[$language]:-"#58a6ff"}
             
-            # Adiciona ao SVG
-            cat >> assets/github-langs.svg << EOF
-              <rect y="$((index * 35))" width="$width" height="20" fill="$color" rx="3"/>
-              <text y="$((index * 35 + 15))" class="lang-name">$language</text>
-              <text x="250" y="$((index * 35 + 15))" class="lang-percent">${percent}%</text>
-            EOF
+            # Adiciona cada linguagem ao arquivo SVG
+            echo "              <rect y=\"$((index * 35))\" width=\"$width\" height=\"20\" fill=\"$color\" rx=\"3\"/>" >> assets/github-langs.svg
+            echo "              <text y=\"$((index * 35 + 15))\" class=\"lang-name\">$language</text>" >> assets/github-langs.svg
+            echo "              <text x=\"250\" y=\"$((index * 35 + 15))\" class=\"lang-percent\">${percent}%</text>" >> assets/github-langs.svg
             
             index=$((index + 1))
           done
           
           # Fecha o SVG
-          cat >> assets/github-langs.svg << 'EOF'
+          cat >> assets/github-langs.svg << 'EOL'
             </g>
             
             <text x="20" y="330" class="footer">Updated: <tspan id="currentDate"></tspan></text>
@@ -185,7 +183,7 @@ jobs:
               document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
             </script>
           </svg>
-          EOF
+          EOL
 
       - name: Clean up temporary files
         run: |
