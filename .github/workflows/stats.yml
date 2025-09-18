@@ -19,6 +19,11 @@ jobs:
       - name: Create assets directory
         run: mkdir -p assets
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq bc curl
+
       - name: Fetch GitHub Data
         run: |
           # Busca dados do usuário
@@ -100,9 +105,26 @@ jobs:
 
       - name: Generate Languages SVG with Real Data
         run: |
-          # Processa linguagens e gera SVG
-          LANG_COLORS='{"JavaScript":"#f1e05a","TypeScript":"#3178c6","HTML":"#e34c26","CSS":"#563d7c","Python":"#3572A5","Java":"#b07219","PHP":"#4F5D95","Ruby":"#701516","C++":"#f34b7d","C":"#555555","Shell":"#89e051","Dockerfile":"#384d54"}'
+          # Cores para linguagens
+          cat > lang-colors.json << 'EOF'
+          {
+            "JavaScript": "#f1e05a",
+            "TypeScript": "#3178c6", 
+            "HTML": "#e34c26",
+            "CSS": "#563d7c",
+            "Python": "#3572A5",
+            "Java": "#b07219",
+            "PHP": "#4F5D95",
+            "Ruby": "#701516",
+            "C++": "#f34b7d",
+            "C": "#555555",
+            "Shell": "#89e051",
+            "Dockerfile": "#384d54",
+            "null": "#8b949e"
+          }
+          EOF
           
+          # Cria SVG base
           cat > assets/github-langs.svg << 'EOF'
           <svg xmlns="http://www.w3.org/2000/svg" width="500" height="300">
             <style>
@@ -119,13 +141,15 @@ jobs:
             <g transform="translate(20, 70)">
           EOF
           
-          # Adiciona linguagens dinamicamente (máximo 5)
+          # Adiciona linguagens dinamicamente
+          LANG_COLORS=$(cat lang-colors.json)
           echo "$LANGUAGES_DATA" | jq -r '.[0:5] | to_entries[] | "\(.key) \(.value.language) \(.value.count)"' | while read -r index language count; do
             total=$(echo "$LANGUAGES_DATA" | jq 'map(.count) | add')
             percent=$(echo "scale=2; ($count / $total) * 100" | bc)
             width=$(echo "scale=2; $percent * 2" | bc)
-            color=$(echo "$LANG_COLORS" | jq -r ".${language} // \"#58a6ff\"")
+            color=$(echo "$LANG_COLORS" | jq -r ".\"$language\" // \"#58a6ff\"")
             
+            # Adiciona cada linguagem ao SVG
             cat >> assets/github-langs.svg << EOF
               <rect y="$((index * 30))" width="$width" height="15" fill="$color"/>
               <text y="$((index * 30 + 12))" class="lang-name">${language}</text>
@@ -143,9 +167,6 @@ jobs:
             </script>
           </svg>
           EOF
-
-      - name: Install jq for JSON processing
-        run: sudo apt-get install -y jq bc
 
       - name: Commit and Push results
         run: |
