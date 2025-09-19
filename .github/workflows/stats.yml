@@ -237,7 +237,7 @@ jobs:
           if [ ! -z "$LANGS_ARRAY" ]; then
             # Calcular posições para a barra
             echo "            <!-- Barra de linguagens -->" >> assets/github-langs.svg
-            echo "            <g transform=\"translate(25, 120)\">" >> assets/github-langs.svg
+            echo "            <g transform=\"translate(25, 90)\">" >> assets/github-langs.svg
             
             current_x=0
             total_width=450
