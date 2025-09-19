@@ -120,7 +120,7 @@ jobs:
             <rect width="500" height="200" rx="10" fill="url(#cardGrad)" stroke="#ffffff" stroke-width="1"/>
             
             <!-- Título -->
-            <text x="25" y="40" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:25px; font-weight:600;">
+            <text x="25" y="40" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:24px; font-weight:500;">
               0rafae1's GitHub Stats
             </text>
             
@@ -162,14 +162,14 @@ jobs:
               
               <!-- Terceira linha -->
               <g transform="translate(0, 50)">
-                <text y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px;">
+                <text y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
                   🐛 Total Issues:
                 </text>
                 <text x="180" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
                   $TOTAL_ISSUES
                 </text>
                 
-                <text x="250" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px;">
+                <text x="250" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
                   🚀 Contributed to (last year):
                 </text>
                 <text x="450" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
@@ -237,7 +237,7 @@ jobs:
           if [ ! -z "$LANGS_ARRAY" ]; then
             # Calcular posições para a barra
             echo "            <!-- Barra de linguagens -->" >> assets/github-langs.svg
-            echo "            <g transform=\"translate(25, 90)\">" >> assets/github-langs.svg
+            echo "            <g transform=\"translate(25, 100)\">" >> assets/github-langs.svg
             
             current_x=0
             total_width=450
@@ -260,7 +260,7 @@ jobs:
           fi
           
           # Adicionar linguagens ao SVG
-          y_pos=160
+          y_pos=150
           if [ ! -z "$LANGS_ARRAY" ]; then
             echo "$LANGS_ARRAY" | while IFS=' ' read -r language bytes; do
               if [ ! -z "$language" ] && [ ! -z "$bytes" ]; then
