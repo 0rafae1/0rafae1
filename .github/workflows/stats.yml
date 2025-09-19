@@ -171,7 +171,7 @@ jobs:
                 
                 <text x="250" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
                   🚀 Contributed to
-                  <tspan x="280" dy="20">(last year):</tspan>
+                  <tspan x="277" dy="20">(last year):</tspan>
                 </text>
                 <text x="405" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
                   $CONTRIBUTED_TO
