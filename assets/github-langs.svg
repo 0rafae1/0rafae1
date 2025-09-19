@@ -14,7 +14,7 @@
     Most Used Languages
   </text>
             <!-- Barra de linguagens -->
-            <g transform="translate(25, 120)">
+            <g transform="translate(25, 90)">
               <rect x="0" y="0" width="175.50" height="12" fill="#e34c26" rx="6"/>
               <rect x="175.50" y="0" width="139.50" height="12" fill="#f1e05a" rx="6"/>
               <rect x="315.00" y="0" width="126.00" height="12" fill="#563d7c" rx="6"/>
