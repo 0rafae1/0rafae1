@@ -1,42 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="500" height="280">
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="300">
   <style>
     .background { fill: #0d1117; }
     .title { fill: #f0f6fc; font-family: Arial; font-size: 20px; font-weight: bold; }
     .stat-label { fill: #8b949e; font-family: Arial; font-size: 14px; }
     .stat-value { fill: #58a6ff; font-family: Arial; font-size: 14px; font-weight: bold; }
-    .icon { fill: #f0f6fc; }
     .footer { fill: #484f58; font-family: Arial; font-size: 12px; }
   </style>
-  <rect width="500" height="280" class="background"/>
+  <rect width="500" height="300" class="background"/>
   
-  <!-- Título -->
   <text x="20" y="40" class="title">GitHub Stats for 0rafae1</text>
   
-  <!-- Estatísticas com ícones -->
   <g transform="translate(20, 70)">
-    <!-- Stars -->
     <text class="stat-label">⭐ Total Stars Earned:</text>
-    <text x="180" class="stat-value">642</text>
+    <text x="200" class="stat-value">0</text>
     
-    <!-- Commits -->
     <text y="30" class="stat-label">📝 Total Commits:</text>
-    <text x="180" y="30" class="stat-value">392</text>
+    <text x="200" y="30" class="stat-value">8</text>
     
-    <!-- PRs -->
     <text y="60" class="stat-label">🔀 Total PRs:</text>
-    <text x="180" y="60" class="stat-value">0</text>
+    <text x="200" y="60" class="stat-value">0</text>
     
-    <!-- Issues -->
     <text y="90" class="stat-label">🐛 Total Issues:</text>
-    <text x="180" y="90" class="stat-value">0</text>
+    <text x="200" y="90" class="stat-value">0</text>
     
-    <!-- Contributions -->
     <text y="120" class="stat-label">🚀 Contributed to (last year):</text>
-    <text x="180" y="120" class="stat-value">19</text>
+    <text x="200" y="120" class="stat-value">0</text>
   </g>
   
-  <!-- Rodapé -->
-  <text x="20" y="260" class="footer">Updated: <tspan id="currentDate"></tspan> • Generated via GitHub Actions</text>
+  <text x="20" y="280" class="footer">Updated: <tspan id="currentDate"></tspan> • Generated via GitHub Actions</text>
   
   <script>
     document.getElementById('currentDate').textContent = new Date().toLocaleDateString();

@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="500" height="300">
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="350">
   <style>
     .background { fill: #0d1117; }
     .title { fill: #f0f6fc; font-family: Arial; font-size: 20px; font-weight: bold; }
@@ -6,41 +6,20 @@
     .lang-percent { fill: #8b949e; font-family: Arial; font-size: 12px; }
     .footer { fill: #484f58; font-family: Arial; font-size: 12px; }
   </style>
-  <rect width="500" height="300" class="background"/>
+  <rect width="500" height="350" class="background"/>
   
-  <!-- Título -->
   <text x="20" y="40" class="title">Most Used Languages</text>
   
-  <!-- Barras de linguagens -->
   <g transform="translate(20, 70)">
-    <!-- HTML -->
-    <rect width="200" height="15" fill="#e34c26"/>
-    <text y="12" class="lang-name">📄 HTML</text>
-    <text x="210" y="12" class="lang-percent">40.54%</text>
-    
-    <!-- CSS -->
-    <rect y="30" width="163" height="15" fill="#563d7c"/>
-    <text y="42" class="lang-name">🎨 CSS</text>
-    <text x="210" y="42" class="lang-percent">33.00%</text>
-    
-    <!-- JavaScript -->
-    <rect y="60" width="118" height="15" fill="#f1e05a"/>
-    <text y="72" class="lang-name">⚡ JavaScript</text>
-    <text x="210" y="72" class="lang-percent">23.83%</text>
-    
-    <!-- TypeScript -->
-    <rect y="90" width="8" height="15" fill="#3178c6"/>
-    <text y="102" class="lang-name">🔷 TypeScript</text>
-    <text x="210" y="102" class="lang-percent">1.65%</text>
-    
-    <!-- Docker -->
-    <rect y="120" width="1" height="15" fill="#384d54"/>
-    <text y="132" class="lang-name">🐳 Dockerfile</text>
-    <text x="210" y="132" class="lang-percent">0.08%</text>
+              <rect y="0" width="200.00" height="20" fill="#e34c26" rx="3"/>
+              <text y="15" class="lang-name">HTML</text>
+              <text x="250" y="15" class="lang-percent">80.00%</text>
+              <rect y="35" width="50.00" height="20" fill="#563d7c" rx="3"/>
+              <text y="50" class="lang-name">CSS</text>
+              <text x="250" y="50" class="lang-percent">20.00%</text>
   </g>
   
-  <!-- Rodapé -->
-  <text x="20" y="280" class="footer">Updated: <tspan id="currentDate"></tspan></text>
+  <text x="20" y="330" class="footer">Updated: <tspan id="currentDate"></tspan></text>
   
   <script>
     document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
