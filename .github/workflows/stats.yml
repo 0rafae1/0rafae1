@@ -120,7 +120,7 @@ jobs:
             <rect width="500" height="200" rx="10" fill="url(#cardGrad)" stroke="#30363d" stroke-width="1"/>
             
             <!-- Título -->
-            <text x="25" y="40" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:18px; font-weight:600;">
+            <text x="25" y="40" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:22px; font-weight:700;">
               0rafae1's GitHub Stats
             </text>
             
@@ -128,14 +128,14 @@ jobs:
             <g transform="translate(25, 65)">
               <!-- Primeira linha -->
               <g>
-                <text y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px;">
+                <text y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:600;">
                   ⭐ Total Stars Earned:
                 </text>
                 <text x="180" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
                   $TOTAL_STARS
                 </text>
                 
-                <text x="250" y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px;">
+                <text x="250" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:600;">
                   🔗 Total Forks:
                 </text>
                 <text x="380" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
@@ -145,14 +145,14 @@ jobs:
               
               <!-- Segunda linha -->
               <g transform="translate(0, 25)">
-                <text y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px;">
+                <text y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:600;">
                   📝 Total Commits:
                 </text>
                 <text x="180" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
                   $TOTAL_COMMITS
                 </text>
                 
-                <text x="250" y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px;">
+                <text x="250" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:600;">
                   🔀 Total PRs:
                 </text>
                 <text x="380" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segue UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
@@ -162,14 +162,14 @@ jobs:
               
               <!-- Terceira linha -->
               <g transform="translate(0, 50)">
-                <text y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px;">
+                <text y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:600;">
                   🐛 Total Issues:
                 </text>
                 <text x="180" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
                   $TOTAL_ISSUES
                 </text>
                 
-                <text x="250" y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px;">
+                <text x="250" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:600;">
                   🚀 Contributed to (last year):
                 </text>
                 <text x="450" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
@@ -275,7 +275,7 @@ jobs:
               <text x="25" y="5" style="fill:#38bdae; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:24px; font-weight:500;">
                 $language
               </text>
-              <text x="400" y="5" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:24px;">
+              <text x="400" y="5" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:18px;">
                 ${percent}%
               </text>
             </g>
