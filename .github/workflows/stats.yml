@@ -120,7 +120,7 @@ jobs:
             <rect width="500" height="200" rx="10" fill="url(#cardGrad)" stroke="#30363d" stroke-width="1"/>
             
             <!-- Título -->
-            <text x="25" y="40" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:22px; font-weight:700;">
+            <text x="25" y="40" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:26px; font-weight:700;">
               0rafae1's GitHub Stats
             </text>
             
@@ -128,14 +128,14 @@ jobs:
             <g transform="translate(25, 65)">
               <!-- Primeira linha -->
               <g>
-                <text y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:600;">
+                <text y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
                   ⭐ Total Stars Earned:
                 </text>
                 <text x="180" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
                   $TOTAL_STARS
                 </text>
                 
-                <text x="250" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:600;">
+                <text x="250" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
                   🔗 Total Forks:
                 </text>
                 <text x="380" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
@@ -145,31 +145,31 @@ jobs:
               
               <!-- Segunda linha -->
               <g transform="translate(0, 25)">
-                <text y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:600;">
+                <text y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
                   📝 Total Commits:
                 </text>
                 <text x="180" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
                   $TOTAL_COMMITS
                 </text>
                 
-                <text x="250" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:600;">
+                <text x="250" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
                   🔀 Total PRs:
                 </text>
-                <text x="380" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segue UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
+                <text x="380" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
                   $TOTAL_PRS
                 </text>
               </g>
               
               <!-- Terceira linha -->
               <g transform="translate(0, 50)">
-                <text y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:600;">
+                <text y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px;">
                   🐛 Total Issues:
                 </text>
                 <text x="180" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
                   $TOTAL_ISSUES
                 </text>
                 
-                <text x="250" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:600;">
+                <text x="250" y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px;">
                   🚀 Contributed to (last year):
                 </text>
                 <text x="450" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
@@ -210,7 +210,7 @@ jobs:
             <rect width="500" height="320" rx="10" fill="url(#cardGrad)" stroke="#30363d" stroke-width="1"/>
             
             <!-- Título -->
-            <text x="25" y="65" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:36px; font-weight:600;">
+            <text x="25" y="45" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:36px; font-weight:600;">
               Most Used Languages
             </text>
           EOF
@@ -237,7 +237,7 @@ jobs:
           if [ ! -z "$LANGS_ARRAY" ]; then
             # Calcular posições para a barra
             echo "            <!-- Barra de linguagens -->" >> assets/github-langs.svg
-            echo "            <g transform=\"translate(25, 100)\">" >> assets/github-langs.svg
+            echo "            <g transform=\"translate(25, 110)\">" >> assets/github-langs.svg
             
             current_x=0
             total_width=450
@@ -260,7 +260,7 @@ jobs:
           fi
           
           # Adicionar linguagens ao SVG
-          y_pos=170
+          y_pos=150
           if [ ! -z "$LANGS_ARRAY" ]; then
             echo "$LANGS_ARRAY" | while IFS=' ' read -r language bytes; do
               if [ ! -z "$language" ] && [ ! -z "$bytes" ]; then
@@ -275,7 +275,7 @@ jobs:
               <text x="25" y="5" style="fill:#38bdae; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:24px; font-weight:500;">
                 $language
               </text>
-              <text x="400" y="5" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:18px;">
+              <text x="400" y="5" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:20px;">
                 ${percent}%
               </text>
             </g>
