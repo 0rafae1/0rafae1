@@ -14,12 +14,12 @@
   <rect width="500" height="200" rx="10" fill="url(#cardGrad)" stroke="#30363d" stroke-width="1"/>
   
   <!-- Título -->
-  <text x="25" y="35" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:24px; font-weight:600;">
+  <text x="25" y="40" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:24px; font-weight:600;">
     0rafae1's GitHub Stats
   </text>
   
   <!-- Estatísticas em grid -->
-  <g transform="translate(25, 60)">
+  <g transform="translate(25, 65)">
     <!-- Primeira linha -->
     <g>
       <text y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px;">
@@ -43,13 +43,13 @@
         📝 Total Commits:
       </text>
       <text x="180" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
-        8
+        21
       </text>
       
       <text x="250" y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px;">
         🔀 Total PRs:
       </text>
-      <text x="380" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
+      <text x="380" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segue UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
         0
       </text>
     </g>
@@ -74,6 +74,6 @@
   
   <!-- Footer com data -->
   <text x="25" y="185" style="fill:#484f58; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:10px;">
-    Last updated: 19/09/2025 01:46 UTC
+    Last updated: 19/09/2025 10:54 UTC
   </text>
 </svg>
