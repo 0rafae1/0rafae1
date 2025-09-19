@@ -210,7 +210,7 @@ jobs:
             <rect width="500" height="320" rx="10" fill="url(#cardGrad)" stroke="#30363d" stroke-width="1"/>
             
             <!-- Título -->
-            <text x="25" y="45" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:36px; font-weight:600;">
+            <text x="25" y="65" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:36px; font-weight:600;">
               Most Used Languages
             </text>
           EOF
@@ -237,7 +237,7 @@ jobs:
           if [ ! -z "$LANGS_ARRAY" ]; then
             # Calcular posições para a barra
             echo "            <!-- Barra de linguagens -->" >> assets/github-langs.svg
-            echo "            <g transform=\"translate(25, 50)\">" >> assets/github-langs.svg
+            echo "            <g transform=\"translate(25, 100)\">" >> assets/github-langs.svg
             
             current_x=0
             total_width=450
@@ -260,7 +260,7 @@ jobs:
           fi
           
           # Adicionar linguagens ao SVG
-          y_pos=200
+          y_pos=170
           if [ ! -z "$LANGS_ARRAY" ]; then
             echo "$LANGS_ARRAY" | while IFS=' ' read -r language bytes; do
               if [ ! -z "$language" ] && [ ! -z "$bytes" ]; then
