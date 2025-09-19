@@ -22,127 +22,200 @@ jobs:
       - name: Install dependencies with error handling
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq bc
+          sudo apt-get install -y jq bc curl
           echo "Dependencies installed successfully"
 
       - name: Fetch GitHub Data with PAT authentication
         run: |
-          # Configuração do PAT para evitar limites de API
           PAT="${{ secrets.PAT_1 }}"
-          echo "Using PAT authentication to avoid rate limits"
+          USERNAME="0rafae1"
           
-          # Busca dados do usuário com tratamento de erro
+          echo "Fetching user data..."
           USER_DATA=$(curl -s -H "Authorization: token $PAT" \
-            "https://api.github.com/users/0rafae1" || echo '{}')
+            "https://api.github.com/users/$USERNAME" || echo '{}')
           
-          # Busca repositórios com paginação
+          echo "Fetching repositories..."
           REPOS_DATA=$(curl -s -H "Authorization: token $PAT" \
-            "https://api.github.com/users/0rafae1/repos?per_page=100&sort=updated" || echo '[]')
+            "https://api.github.com/users/$USERNAME/repos?per_page=100&sort=updated" || echo '[]')
           
-          # Busca eventos para commits, PRs e issues
+          echo "Fetching events..."
           EVENTS_DATA=$(curl -s -H "Authorization: token $PAT" \
-            "https://api.github.com/users/0rafae1/events?per_page=100" || echo '[]')
+            "https://api.github.com/users/$USERNAME/events?per_page=300" || echo '[]')
           
-          # Processa os dados com valores padrão para evitar null
+          # Processar dados básicos
           TOTAL_STARS=$(echo "$REPOS_DATA" | jq '[.[].stargazers_count] | add // 0')
-          TOTAL_COMMITS=$(echo "$EVENTS_DATA" | jq '[.[] | select(.type == "PushEvent") | .payload.commits | length] | add // 0')
-          TOTAL_PRS=$(echo "$EVENTS_DATA" | jq '[.[] | select(.type == "PullRequestEvent")] | length // 0')
-          TOTAL_ISSUES=$(echo "$EVENTS_DATA" | jq '[.[] | select(.type == "IssuesEvent")] | length // 0')
+          TOTAL_FORKS=$(echo "$REPOS_DATA" | jq '[.[].forks_count] | add // 0')
           
-          # Contribuições para outros repositórios (último ano)
-          CURRENT_YEAR=$(date +%Y)
-          CONTRIBUTED_TO=$(echo "$EVENTS_DATA" | jq --arg year "$CURRENT_YEAR" \
-            '[.[] | select(.type == "PushEvent" or .type == "PullRequestEvent" or .type == "IssuesEvent") | 
-            select(.repo.name | contains("0rafae1/") | not) | 
-            select(.created_at | startswith($year))] | 
+          # Calcular commits dos últimos 12 meses
+          CURRENT_DATE=$(date -u +"%Y-%m-%d")
+          YEAR_AGO=$(date -u -d "1 year ago" +"%Y-%m-%d")
+          TOTAL_COMMITS=$(echo "$EVENTS_DATA" | jq --arg year_ago "$YEAR_AGO" \
+            '[.[] | select(.type == "PushEvent") | select(.created_at >= $year_ago) | .payload.commits[]] | length // 0')
+          
+          TOTAL_PRS=$(echo "$EVENTS_DATA" | jq --arg year_ago "$YEAR_AGO" \
+            '[.[] | select(.type == "PullRequestEvent") | select(.created_at >= $year_ago)] | length // 0')
+          
+          TOTAL_ISSUES=$(echo "$EVENTS_DATA" | jq --arg year_ago "$YEAR_AGO" \
+            '[.[] | select(.type == "IssuesEvent") | select(.created_at >= $year_ago)] | length // 0')
+          
+          # Contar repositórios onde contribuiu (não próprios)
+          CONTRIBUTED_TO=$(echo "$EVENTS_DATA" | jq --arg username "$USERNAME" --arg year_ago "$YEAR_AGO" \
+            '[.[] | select(.created_at >= $year_ago) | select(.repo.name | contains($username + "/") | not)] | 
             unique_by(.repo.name) | length // 0')
           
-          # Linguagens mais usadas (com tratamento para null)
-          LANGUAGES=$(echo "$REPOS_DATA" | jq '[.[] | .language] | map(select(. != null)) | group_by(.) | map({language: .[0], count: length}) | sort_by(.count) | reverse | .[0:5] // []')
-          
-          # Salva em arquivos com valores padrão
+          # Salvar dados básicos
           echo "$TOTAL_STARS" > total_stars.txt
           echo "$TOTAL_COMMITS" > total_commits.txt
           echo "$TOTAL_PRS" > total_prs.txt
           echo "$TOTAL_ISSUES" > total_issues.txt
           echo "$CONTRIBUTED_TO" > contributed_to.txt
-          echo "$LANGUAGES" > languages.json
+          echo "$TOTAL_FORKS" > total_forks.txt
           
-          echo "Data fetched successfully:"
-          echo "Stars: $TOTAL_STARS, Commits: $TOTAL_COMMITS, PRs: $TOTAL_PRS, Issues: $TOTAL_ISSUES, Contributed: $CONTRIBUTED_TO"
+          echo "Fetching detailed language data..."
+          # Buscar linguagens detalhadas de cada repositório
+          echo '{}' > all_languages.json
+          
+          echo "$REPOS_DATA" | jq -r '.[].name' | head -20 | while read -r repo_name; do
+            if [ ! -z "$repo_name" ]; then
+              echo "Processing repository: $repo_name"
+              LANG_DATA=$(curl -s -H "Authorization: token $PAT" \
+                "https://api.github.com/repos/$USERNAME/$repo_name/languages" || echo '{}')
+              
+              # Combinar com dados existentes
+              jq -s '.[0] * .[1]' all_languages.json <(echo "$LANG_DATA") > temp_langs.json
+              mv temp_langs.json all_languages.json
+              
+              # Pequena pausa para evitar rate limiting
+              sleep 0.5
+            fi
+          done
+          
+          echo "Language data collection complete"
 
-      - name: Generate Detailed Stats SVG
+      - name: Generate Modern Stats SVG
         run: |
-          # Lê os dados com valores padrão
+          # Ler dados
           TOTAL_STARS=$(cat total_stars.txt || echo "0")
           TOTAL_COMMITS=$(cat total_commits.txt || echo "0")
           TOTAL_PRS=$(cat total_prs.txt || echo "0")
           TOTAL_ISSUES=$(cat total_issues.txt || echo "0")
           CONTRIBUTED_TO=$(cat contributed_to.txt || echo "0")
+          TOTAL_FORKS=$(cat total_forks.txt || echo "0")
           
-          # Cria SVG completo com todos os dados REAIS do seu perfil
+          # Criar SVG moderno com design semelhante ao exemplo
           cat > assets/github-stats.svg << EOF
-          <svg xmlns="http://www.w3.org/2000/svg" width="500" height="300">
-            <style>
-              .background { fill: #0d1117; }
-              .title { fill: #f0f6fc; font-family: Arial; font-size: 20px; font-weight: bold; }
-              .stat-label { fill: #8b949e; font-family: Arial; font-size: 14px; }
-              .stat-value { fill: #58a6ff; font-family: Arial; font-size: 14px; font-weight: bold; }
-              .footer { fill: #484f58; font-family: Arial; font-size: 12px; }
-            </style>
-            <rect width="500" height="300" class="background"/>
+          <svg xmlns="http://www.w3.org/2000/svg" width="500" height="200" viewBox="0 0 500 200">
+            <defs>
+              <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#58a6ff;stop-opacity:0.8" />
+                <stop offset="100%" style="stop-color:#1f6feb;stop-opacity:0.6" />
+              </linearGradient>
+              <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#21262d;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#0d1117;stop-opacity:1" />
+              </linearGradient>
+            </defs>
             
-            <text x="20" y="40" class="title">GitHub Stats for 0rafae1</text>
+            <!-- Background com gradiente -->
+            <rect width="500" height="200" rx="10" fill="url(#cardGrad)" stroke="#30363d" stroke-width="1"/>
             
-            <g transform="translate(20, 70)">
-              <text class="stat-label">⭐ Total Stars Earned:</text>
-              <text x="200" class="stat-value">$TOTAL_STARS</text>
+            <!-- Título -->
+            <text x="25" y="35" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:18px; font-weight:600;">
+              0rafae1's GitHub Stats
+            </text>
+            
+            <!-- Estatísticas em grid -->
+            <g transform="translate(25, 60)">
+              <!-- Primeira linha -->
+              <g>
+                <text y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px;">
+                  ⭐ Total Stars Earned:
+                </text>
+                <text x="180" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px; font-weight:600;">
+                  $TOTAL_STARS
+                </text>
+                
+                <text x="250" y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px;">
+                  🔗 Total Forks:
+                </text>
+                <text x="380" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px; font-weight:600;">
+                  $TOTAL_FORKS
+                </text>
+              </g>
               
-              <text y="30" class="stat-label">📝 Total Commits:</text>
-              <text x="200" y="30" class="stat-value">$TOTAL_COMMITS</text>
+              <!-- Segunda linha -->
+              <g transform="translate(0, 25)">
+                <text y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px;">
+                  📝 Total Commits:
+                </text>
+                <text x="180" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px; font-weight:600;">
+                  $TOTAL_COMMITS
+                </text>
+                
+                <text x="250" y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px;">
+                  🔀 Total PRs:
+                </text>
+                <text x="380" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px; font-weight:600;">
+                  $TOTAL_PRS
+                </text>
+              </g>
               
-              <text y="60" class="stat-label">🔀 Total PRs:</text>
-              <text x="200" y="60" class="stat-value">$TOTAL_PRS</text>
-              
-              <text y="90" class="stat-label">🐛 Total Issues:</text>
-              <text x="200" y="90" class="stat-value">$TOTAL_ISSUES</text>
-              
-              <text y="120" class="stat-label">🚀 Contributed to (last year):</text>
-              <text x="200" y="120" class="stat-value">$CONTRIBUTED_TO</text>
+              <!-- Terceira linha -->
+              <g transform="translate(0, 50)">
+                <text y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px;">
+                  🐛 Total Issues:
+                </text>
+                <text x="180" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px; font-weight:600;">
+                  $TOTAL_ISSUES
+                </text>
+                
+                <text x="250" y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px;">
+                  🚀 Contributed to (last year):
+                </text>
+                <text x="450" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px; font-weight:600;">
+                  $CONTRIBUTED_TO
+                </text>
+              </g>
             </g>
             
-            <text x="20" y="280" class="footer">Updated: <tspan id="currentDate"></tspan> • Generated via GitHub Actions</text>
-            
-            <script>
-              document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
-            </script>
+            <!-- Footer com data -->
+            <text x="25" y="185" style="fill:#484f58; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:10px;">
+              Last updated: $(date +'%d/%m/%Y %H:%M UTC')
+            </text>
           </svg>
           EOF
 
-      - name: Generate Languages SVG
+      - name: Generate Modern Languages SVG
         run: |
-          # Cria o SVG base primeiro
-          cat > assets/github-langs.svg << 'EOL'
-          <svg xmlns="http://www.w3.org/2000/svg" width="500" height="350">
-            <style>
-              .background { fill: #0d1117; }
-              .title { fill: #f0f6fc; font-family: Arial; font-size: 20px; font-weight: bold; }
-              .lang-name { fill: #f0f6fc; font-family: Arial; font-size: 14px; }
-              .lang-percent { fill: #8b949e; font-family: Arial; font-size: 12px; }
-              .footer { fill: #484f58; font-family: Arial; font-size: 12px; }
-            </style>
-            <rect width="500" height="350" class="background"/>
-            
-            <text x="20" y="40" class="title">Most Used Languages</text>
-            
-            <g transform="translate(20, 70)">
-          EOL
+          # Processar dados de linguagens
+          LANG_DATA=$(cat all_languages.json || echo '{}')
           
-          # Adiciona linguagens dinamicamente
-          LANG_DATA=$(cat languages.json || echo '[]')
-          TOTAL=$(echo "$LANG_DATA" | jq 'map(.count) | add // 1')
+          # Calcular total de bytes
+          TOTAL_BYTES=$(echo "$LANG_DATA" | jq '[.[]] | add // 1')
           
-          # Cores para linguagens
+          # Criar array de linguagens ordenado
+          LANGS_ARRAY=$(echo "$LANG_DATA" | jq -r 'to_entries | sort_by(.value) | reverse | .[0:5] | .[] | "\(.key) \(.value)"')
+          
+          # Criar SVG de linguagens moderno
+          cat > assets/github-langs.svg << 'EOF'
+          <svg xmlns="http://www.w3.org/2000/svg" width="500" height="300" viewBox="0 0 500 300">
+            <defs>
+              <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#21262d;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#0d1117;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            
+            <!-- Background -->
+            <rect width="500" height="300" rx="10" fill="url(#cardGrad)" stroke="#30363d" stroke-width="1"/>
+            
+            <!-- Título -->
+            <text x="25" y="35" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:18px; font-weight:600;">
+              Most Used Languages
+            </text>
+          EOF
+          
+          # Definir cores das linguagens
           declare -A colors=(
             ["JavaScript"]="#f1e05a"
             ["TypeScript"]="#3178c6"
@@ -156,44 +229,61 @@ jobs:
             ["C"]="#555555"
             ["Shell"]="#89e051"
             ["Dockerfile"]="#384d54"
+            ["Vue"]="#4fc08d"
+            ["React"]="#61dafb"
           )
           
-          # Processa cada linguagem
-          index=0
-          echo "$LANG_DATA" | jq -r '.[] | "\(.language) \(.count)"' | while read -r language count; do
-            percent=$(echo "scale=2; ($count / $TOTAL) * 100" | bc)
-            width=$(echo "scale=2; $percent * 2.5" | bc)
-            color=${colors[$language]:-"#58a6ff"}
+          # Adicionar linguagens ao SVG
+          y_pos=70
+          if [ ! -z "$LANGS_ARRAY" ]; then
+            echo "$LANGS_ARRAY" | while IFS=' ' read -r language bytes; do
+              if [ ! -z "$language" ] && [ ! -z "$bytes" ]; then
+                percent=$(echo "scale=2; ($bytes / $TOTAL_BYTES) * 100" | bc 2>/dev/null || echo "0")
+                width=$(echo "scale=2; $percent * 4" | bc 2>/dev/null || echo "0")
+                color=${colors[$language]:-"#58a6ff"}
+                
+                cat >> assets/github-langs.svg << EOF
             
-            # Adiciona cada linguagem ao arquivo SVG
-            echo "              <rect y=\"$((index * 35))\" width=\"$width\" height=\"20\" fill=\"$color\" rx=\"3\"/>" >> assets/github-langs.svg
-            echo "              <text y=\"$((index * 35 + 15))\" class=\"lang-name\">$language</text>" >> assets/github-langs.svg
-            echo "              <text x=\"250\" y=\"$((index * 35 + 15))\" class=\"lang-percent\">${percent}%</text>" >> assets/github-langs.svg
-            
-            index=$((index + 1))
-          done
-          
-          # Fecha o SVG
-          cat >> assets/github-langs.svg << 'EOL'
+            <!-- $language -->
+            <g transform="translate(25, $y_pos)">
+              <circle cx="8" cy="0" r="6" fill="$color"/>
+              <text x="25" y="4" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:500;">
+                $language
+              </text>
+              <text x="400" y="4" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:12px;">
+                ${percent}%
+              </text>
+              <rect x="25" y="10" width="$width" height="4" rx="2" fill="$color" opacity="0.8"/>
             </g>
+          EOF
+                y_pos=$((y_pos + 35))
+              fi
+            done
+          fi
+          
+          # Fechar SVG
+          cat >> assets/github-langs.svg << 'EOF'
             
-            <text x="20" y="330" class="footer">Updated: <tspan id="currentDate"></tspan></text>
-            
-            <script>
-              document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
-            </script>
+            <!-- Footer -->
+            <text x="25" y="285" style="fill:#484f58; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:10px;">
+              Last updated: $(date +'%d/%m/%Y %H:%M UTC')
+            </text>
           </svg>
-          EOL
+          EOF
 
       - name: Clean up temporary files
         run: |
-          rm -f total_*.txt contributed_to.txt languages.json
-          echo "Temporary files cleaned up"
+          rm -f total_*.txt contributed_to.txt all_languages.json temp_langs.json
+          echo "Cleanup completed"
 
       - name: Commit and Push results
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add assets/
-          git diff --staged --quiet || git commit -m "feat: update GitHub stats with real data and PAT authentication"
-          git push
+          if ! git diff --staged --quiet; then
+            git commit -m "feat: update GitHub stats with modern design and accurate language detection"
+            git push
+          else
+            echo "No changes to commit"
+          fi
