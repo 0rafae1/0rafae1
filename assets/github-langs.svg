@@ -10,7 +10,7 @@
   <rect width="500" height="320" rx="10" fill="url(#cardGrad)" stroke="#ffffff" stroke-width="1"/>
   
   <!-- Título -->
-  <text x="25" y="50" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:36px; font-weight:600;">
+  <text x="25" y="65" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:36px; font-weight:600;">
     Most Used Languages
   </text>
             <!-- Barra de linguagens -->
@@ -21,7 +21,7 @@
             </g>
   
   <!-- HTML -->
-  <g transform="translate(25, 180)">
+  <g transform="translate(25, 160)">
     <circle cx="8" cy="0" r="6" fill="#e34c26"/>
     <text x="25" y="5" style="fill:#38bdae; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:24px; font-weight:500;">
       HTML
@@ -32,7 +32,7 @@
   </g>
   
   <!-- JavaScript -->
-  <g transform="translate(25, 215)">
+  <g transform="translate(25, 195)">
     <circle cx="8" cy="0" r="6" fill="#f1e05a"/>
     <text x="25" y="5" style="fill:#38bdae; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:24px; font-weight:500;">
       JavaScript
@@ -43,7 +43,7 @@
   </g>
   
   <!-- CSS -->
-  <g transform="translate(25, 250)">
+  <g transform="translate(25, 230)">
     <circle cx="8" cy="0" r="6" fill="#563d7c"/>
     <text x="25" y="5" style="fill:#38bdae; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:24px; font-weight:500;">
       CSS
