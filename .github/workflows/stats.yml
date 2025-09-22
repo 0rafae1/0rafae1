@@ -49,9 +49,19 @@ jobs:
           # Calcular commits dos últimos 12 meses
           CURRENT_DATE=$(date -u +"%Y-%m-%d")
           YEAR_AGO=$(date -u -d "1 year ago" +"%Y-%m-%d")
-          TOTAL_COMMITS=$(echo "$EVENTS_DATA" | jq --arg year_ago "$YEAR_AGO" \
-            '[.[] | select(.type == "PushEvent") | select(.created_at >= $year_ago) | .payload.commits[]] | length // 0')
-          
+          TOTAL_COMMITS=$(echo "$EVENTS_DATA" | jq --arg year_ago "$YEAR_AGO" --arg username "$USERNAME" '
+          [.[] |
+            select(.type == "PushEvent") |
+            select(.created_at >= $year_ago) |
+            select(.actor.login == $username) |
+            .payload.commits[] |
+            select(
+              (.author.name != "github-actions[bot]") and
+              (.author.email != "41898282+github-actions[bot]@users.noreply.github.com") and
+              (.message | test("\\[skip stats\\]"; "i") | not)
+            )
+          ] | length // 0')
+
           TOTAL_PRS=$(echo "$EVENTS_DATA" | jq --arg year_ago "$YEAR_AGO" \
             '[.[] | select(.type == "PullRequestEvent") | select(.created_at >= $year_ago)] | length // 0')
           
@@ -307,7 +317,7 @@ jobs:
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add assets/
           if ! git diff --staged --quiet; then
-            git commit -m "fix: improve readability with larger fonts and compact language card layout"
+            git commit -m "🤖 Auto-update GitHub stats [skip stats]"
             git push
           else
             echo "No changes to commit"
