@@ -14,7 +14,7 @@
   <rect width="500" height="200" rx="10" fill="url(#cardGrad)" stroke="#ffffff" stroke-width="1"/>
   
   <!-- Título -->
-  <text x="25" y="40" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:24px; font-weight:500;">
+  <text x="25" y="40" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:26px; font-weight:600;">
     0rafae1's GitHub Stats
   </text>
   
@@ -32,7 +32,7 @@
       <text x="250" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
         🔗 Total Forks:
       </text>
-      <text x="405" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
+      <text x="380" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
         0
       </text>
     </g>
@@ -49,25 +49,24 @@
       <text x="250" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
         🔀 Total PRs:
       </text>
-      <text x="405" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
+      <text x="380" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
         0
       </text>
     </g>
     
     <!-- Terceira linha -->
     <g transform="translate(0, 50)">
-      <text y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
+      <text y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px;">
         🐛 Total Issues:
       </text>
       <text x="180" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
         0
       </text>
       
-      <text x="250" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
-        🚀 Contributed to
-        <tspan x="277" dy="20">(last year):</tspan>
+      <text x="250" y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px;">
+        🚀 Contributed to (last year):
       </text>
-      <text x="405" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
+      <text x="450" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
         0
       </text>
     </g>
@@ -75,6 +74,6 @@
   
   <!-- Footer com data -->
   <text x="25" y="185" style="fill:#484f58; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:10px;">
-    Last updated: 04/03/2026 21:46 UTC
+    Last updated: 04/03/2026 22:39 UTC
   </text>
 </svg>
