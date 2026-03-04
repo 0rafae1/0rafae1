@@ -45,45 +45,40 @@ jobs:
           REPO_COUNT=$(echo "$REPOS_DATA" | jq 'length')
           echo "Found $REPO_COUNT repositories"
           
-          echo "Fetching events..."
+          echo "Fetching events (last 90 events)..."
           EVENTS_DATA=$(curl -s -H "Authorization: token $PAT" \
-            "https://api.github.com/users/$USERNAME/events?per_page=300" || echo '[]')
+            "https://api.github.com/users/$USERNAME/events?per_page=100" || echo '[]')
           
           EVENT_COUNT=$(echo "$EVENTS_DATA" | jq 'length')
           echo "Found $EVENT_COUNT events"
           
-          # Processar dados básicos
+          # Processar dados básicos (sem filtro de data - TOTAL geral)
           TOTAL_STARS=$(echo "$REPOS_DATA" | jq '[.[].stargazers_count] | add // 0')
           TOTAL_FORKS=$(echo "$REPOS_DATA" | jq '[.[].forks_count] | add // 0')
           
-          echo "Total Stars: $TOTAL_STARS"
-          echo "Total Forks: $TOTAL_FORKS"
+          echo "Total Stars (all time): $TOTAL_STARS"
+          echo "Total Forks (all time): $TOTAL_FORKS"
           
-          # Calcular commits dos últimos 12 meses
-          CURRENT_DATE=$(date -u +"%Y-%m-%d")
-          YEAR_AGO=$(date -u -d "1 year ago" +"%Y-%m-%d")
+          # Estatísticas dos últimos eventos disponíveis (últimos 90 eventos, não por data)
+          TOTAL_COMMITS=$(echo "$EVENTS_DATA" | jq \
+            '[.[] | select(.type == "PushEvent") | .payload.commits // [] | .[]] | length // 0')
           
-          echo "Calculating stats from $YEAR_AGO to $CURRENT_DATE"
+          TOTAL_PRS=$(echo "$EVENTS_DATA" | jq \
+            '[.[] | select(.type == "PullRequestEvent")] | length // 0')
           
-          TOTAL_COMMITS=$(echo "$EVENTS_DATA" | jq --arg year_ago "$YEAR_AGO" \
-            '[.[] | select(.type == "PushEvent") | select(.created_at >= $year_ago) | .payload.commits // [] | .[]] | length // 0')
+          TOTAL_ISSUES=$(echo "$EVENTS_DATA" | jq \
+            '[.[] | select(.type == "IssuesEvent")] | length // 0')
           
-          TOTAL_PRS=$(echo "$EVENTS_DATA" | jq --arg year_ago "$YEAR_AGO" \
-            '[.[] | select(.type == "PullRequestEvent") | select(.created_at >= $year_ago)] | length // 0')
+          echo "Total Commits (recent): $TOTAL_COMMITS"
+          echo "Total PRs (recent): $TOTAL_PRS"
+          echo "Total Issues (recent): $TOTAL_ISSUES"
           
-          TOTAL_ISSUES=$(echo "$EVENTS_DATA" | jq --arg year_ago "$YEAR_AGO" \
-            '[.[] | select(.type == "IssuesEvent") | select(.created_at >= $year_ago)] | length // 0')
-          
-          echo "Total Commits (last year): $TOTAL_COMMITS"
-          echo "Total PRs (last year): $TOTAL_PRS"
-          echo "Total Issues (last year): $TOTAL_ISSUES"
-          
-          # Contar repositórios onde contribuiu (não próprios)
-          CONTRIBUTED_TO=$(echo "$EVENTS_DATA" | jq --arg username "$USERNAME" --arg year_ago "$YEAR_AGO" \
-            '[.[] | select(.created_at >= $year_ago) | select(.repo.name | contains($username + "/") | not)] | 
+          # Contar repositórios onde contribuiu (não próprios, últimos eventos)
+          CONTRIBUTED_TO=$(echo "$EVENTS_DATA" | jq --arg username "$USERNAME" \
+            '[.[] | select(.repo.name | contains($username + "/") | not)] | 
             unique_by(.repo.name) | length // 0')
           
-          echo "Contributed to (last year): $CONTRIBUTED_TO"
+          echo "Contributed to (recent): $CONTRIBUTED_TO"
           
           # Salvar dados básicos
           echo "$TOTAL_STARS" > total_stars.txt
@@ -138,7 +133,7 @@ jobs:
               </linearGradient>
             </defs>
             
-            <!-- Background com gradiente -->
+            <!-- Background com borda branca -->
             <rect width="500" height="200" rx="10" fill="url(#cardGrad)" stroke="#ffffff" stroke-width="1"/>
             
             <!-- Título -->
@@ -153,14 +148,14 @@ jobs:
                 <text y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
                   ⭐ Total Stars Earned:
                 </text>
-                <text x="180" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
+                <text x="200" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
                   $TOTAL_STARS
                 </text>
                 
-                <text x="250" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
+                <text x="280" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
                   🔗 Total Forks:
                 </text>
-                <text x="380" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
+                <text x="410" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
                   $TOTAL_FORKS
                 </text>
               </g>
@@ -170,29 +165,29 @@ jobs:
                 <text y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
                   📝 Total Commits:
                 </text>
-                <text x="180" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
+                <text x="200" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
                   $TOTAL_COMMITS
                 </text>
                 
-                <text x="250" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
+                <text x="280" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
                   🔀 Total PRs:
                 </text>
-                <text x="380" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
+                <text x="410" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
                   $TOTAL_PRS
                 </text>
               </g>
               
               <!-- Terceira linha -->
               <g transform="translate(0, 50)">
-                <text y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px;">
+                <text y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
                   🐛 Total Issues:
                 </text>
-                <text x="180" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
+                <text x="200" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
                   $TOTAL_ISSUES
                 </text>
                 
-                <text x="250" y="0" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px;">
-                  🚀 Contributed to (last year):
+                <text x="280" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
+                  🚀 Contributed to:
                 </text>
                 <text x="450" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
                   $CONTRIBUTED_TO
@@ -228,7 +223,7 @@ jobs:
               </linearGradient>
             </defs>
             
-            <!-- Background -->
+            <!-- Background com borda branca -->
             <rect width="500" height="320" rx="10" fill="url(#cardGrad)" stroke="#ffffff" stroke-width="1"/>
             
             <!-- Título -->
