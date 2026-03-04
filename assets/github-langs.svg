@@ -6,7 +6,7 @@
     </linearGradient>
   </defs>
   
-  <!-- Background -->
+  <!-- Background com borda branca -->
   <rect width="500" height="320" rx="10" fill="url(#cardGrad)" stroke="#ffffff" stroke-width="1"/>
   
   <!-- Título -->
