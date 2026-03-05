@@ -149,11 +149,24 @@ jobs:
           # Buscar linguagens detalhadas de cada repositório
           echo '{}' > all_languages.json
           
+          TOTAL_REPOS_WITH_CODE=0
+          
           echo "$REPOS_DATA" | jq -r '.[].name' | while read -r repo_name; do
             if [ ! -z "$repo_name" ]; then
               echo "Processing languages for: $repo_name"
               LANG_DATA=$(curl -s -H "Authorization: token $PAT" \
                 "https://api.github.com/repos/$USERNAME/$repo_name/languages" || echo '{}')
+              
+              # Verificar se o repositório tem código
+              LANG_COUNT=$(echo "$LANG_DATA" | jq 'length')
+              
+              if [ "$LANG_COUNT" -gt 0 ]; then
+                echo "  ✓ Found $LANG_COUNT language(s) in $repo_name:"
+                echo "$LANG_DATA" | jq -r 'to_entries[] | "    - \(.key): \(.value) bytes"'
+                TOTAL_REPOS_WITH_CODE=$((TOTAL_REPOS_WITH_CODE + 1))
+              else
+                echo "  ✗ No code detected in $repo_name (empty or non-code repo)"
+              fi
               
               # Combinar com dados existentes
               jq -s '.[0] * .[1]' all_languages.json <(echo "$LANG_DATA") > temp_langs.json
@@ -163,6 +176,19 @@ jobs:
             fi
           done
           
+          echo ""
+          echo "Language aggregation summary:"
+          echo "  Repositories with code: $TOTAL_REPOS_WITH_CODE / $REPO_COUNT"
+          
+          # Mostrar totais agregados
+          LANG_TOTALS=$(cat all_languages.json)
+          TOTAL_BYTES=$(echo "$LANG_TOTALS" | jq '[.[]] | add // 0')
+          
+          echo "  Total bytes of code: $TOTAL_BYTES"
+          echo "  Language breakdown:"
+          echo "$LANG_TOTALS" | jq -r 'to_entries | sort_by(.value) | reverse | .[] | "    \(.key): \(.value) bytes (\((.value * 100.0 / '"$TOTAL_BYTES"' * 100) / 100)%)"'
+          
+          echo ""
           echo "Data collection complete!"
           echo "Summary:"
           echo "  Stars: $TOTAL_STARS"
@@ -270,11 +296,23 @@ jobs:
           # Processar dados de linguagens
           LANG_DATA=$(cat all_languages.json || echo '{}')
           
+          echo "Validating language data..."
+          LANG_COUNT=$(echo "$LANG_DATA" | jq 'length')
+          echo "Total unique languages found: $LANG_COUNT"
+          
+          if [ "$LANG_COUNT" -eq 0 ]; then
+            echo "WARNING: No language data found! SVG will show 'No data available'"
+          fi
+          
           # Calcular total de bytes
           TOTAL_BYTES=$(echo "$LANG_DATA" | jq '[.[]] | add // 1')
+          echo "Total bytes across all languages: $TOTAL_BYTES"
           
-          # Criar array de linguagens ordenado
+          # Criar array de linguagens ordenado (top 5)
           LANGS_ARRAY=$(echo "$LANG_DATA" | jq -r 'to_entries | sort_by(.value) | reverse | .[0:5] | .[] | "\(.key) \(.value)"')
+          
+          echo "Top 5 languages selected for display:"
+          echo "$LANG_DATA" | jq -r 'to_entries | sort_by(.value) | reverse | .[0:5] | .[] | "  \(.key): \(.value) bytes"'
           
           # Criar SVG de linguagens moderno
           cat > assets/github-langs.svg << 'EOF'
@@ -315,6 +353,7 @@ jobs:
           
           # Criar barra de progresso das linguagens
           if [ ! -z "$LANGS_ARRAY" ]; then
+            echo "Generating language progress bar..."
             # Calcular posições para a barra
             echo "            <!-- Barra de linguagens -->" >> assets/github-langs.svg
             echo "            <g transform=\"translate(25, 120)\">" >> assets/github-langs.svg
@@ -328,8 +367,12 @@ jobs:
                 width=$(echo "scale=2; ($percent / 100) * $total_width" | bc 2>/dev/null || echo "0")
                 color=${colors[$language]:-"#58a6ff"}
                 
+                echo "  $language: ${percent}% of total code ($width px width)"
+                
                 if (( $(echo "$width > 5" | bc -l) )); then
                   echo "              <rect x=\"$current_x\" y=\"0\" width=\"$width\" height=\"12\" fill=\"$color\" rx=\"6\"/>" >> assets/github-langs.svg
+                else
+                  echo "  (too small to display in bar, min width is 5px)"
                 fi
                 
                 current_x=$(echo "$current_x + $width" | bc)
@@ -337,15 +380,20 @@ jobs:
             done
             
             echo "            </g>" >> assets/github-langs.svg
+          else
+            echo "WARNING: No language data to generate progress bar"
           fi
           
           # Adicionar linguagens ao SVG
           y_pos=180
           if [ ! -z "$LANGS_ARRAY" ]; then
+            echo "Generating language list..."
             echo "$LANGS_ARRAY" | while IFS=' ' read -r language bytes; do
               if [ ! -z "$language" ] && [ ! -z "$bytes" ]; then
                 percent=$(echo "scale=2; ($bytes / $TOTAL_BYTES) * 100" | bc 2>/dev/null || echo "0")
                 color=${colors[$language]:-"#58a6ff"}
+                
+                echo "  Adding: $language (${percent}%)"
                 
                 cat >> assets/github-langs.svg << EOF
             
