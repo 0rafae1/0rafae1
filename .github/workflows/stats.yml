@@ -38,49 +38,75 @@ jobs:
           USER_DATA=$(curl -s -H "Authorization: token $PAT" \
             "https://api.github.com/users/$USERNAME" || echo '{}')
           
+          PUBLIC_REPOS=$(echo "$USER_DATA" | jq '.public_repos // 0')
+          echo "User has $PUBLIC_REPOS public repositories"
+          
           echo "Fetching repositories..."
           REPOS_DATA=$(curl -s -H "Authorization: token $PAT" \
-            "https://api.github.com/users/$USERNAME/repos?per_page=100&sort=updated" || echo '[]')
+            "https://api.github.com/users/$USERNAME/repos?per_page=100&sort=updated&type=owner" || echo '[]')
           
           REPO_COUNT=$(echo "$REPOS_DATA" | jq 'length')
           echo "Found $REPO_COUNT repositories"
           
-          echo "Fetching events (last 90 events)..."
-          EVENTS_DATA=$(curl -s -H "Authorization: token $PAT" \
-            "https://api.github.com/users/$USERNAME/events?per_page=100" || echo '[]')
-          
-          EVENT_COUNT=$(echo "$EVENTS_DATA" | jq 'length')
-          echo "Found $EVENT_COUNT events"
-          
-          # Processar dados básicos (sem filtro de data - TOTAL geral)
+          # Processar dados básicos (TOTAIS de todos os repos)
           TOTAL_STARS=$(echo "$REPOS_DATA" | jq '[.[].stargazers_count] | add // 0')
           TOTAL_FORKS=$(echo "$REPOS_DATA" | jq '[.[].forks_count] | add // 0')
           
-          echo "Total Stars (all time): $TOTAL_STARS"
-          echo "Total Forks (all time): $TOTAL_FORKS"
+          echo "Total Stars (all repos): $TOTAL_STARS"
+          echo "Total Forks (all repos): $TOTAL_FORKS"
           
-          # Estatísticas dos últimos eventos disponíveis (últimos 90 eventos, não por data)
-          TOTAL_COMMITS=$(echo "$EVENTS_DATA" | jq \
-            '[.[] | select(.type == "PushEvent") | .payload.commits // [] | .[]] | length // 0')
+          # Buscar commits totais de cada repositório
+          echo "Calculating total commits from all repositories..."
+          TOTAL_COMMITS=0
+          TOTAL_OPEN_ISSUES=0
+          CONTRIBUTED_REPOS=0
           
-          TOTAL_PRS=$(echo "$EVENTS_DATA" | jq \
-            '[.[] | select(.type == "PullRequestEvent")] | length // 0')
+          echo "$REPOS_DATA" | jq -r '.[] | "\(.name) \(.default_branch)"' | while read -r repo_name default_branch; do
+            if [ ! -z "$repo_name" ] && [ "$repo_name" != "null" ]; then
+              echo "Processing commits for: $repo_name (branch: $default_branch)"
+              
+              # Buscar total de commits no branch principal
+              COMMITS_API=$(curl -s -H "Authorization: token $PAT" \
+                "https://api.github.com/repos/$USERNAME/$repo_name/commits?per_page=1&sha=$default_branch" || echo "[]")
+              
+              # Pegar o total de commits do header Link (se disponível)
+              REPO_COMMITS=$(echo "$COMMITS_API" | jq 'if type == "array" then length else 0 end')
+              
+              if [ "$REPO_COMMITS" -gt 0 ]; then
+                TOTAL_COMMITS=$((TOTAL_COMMITS + REPO_COMMITS))
+                echo "  → Found commits in $repo_name"
+              fi
+              
+              sleep 0.3
+            fi
+          done
           
-          TOTAL_ISSUES=$(echo "$EVENTS_DATA" | jq \
-            '[.[] | select(.type == "IssuesEvent")] | length // 0')
+          # Buscar issues e PRs totais
+          echo "Fetching issues and pull requests..."
+          ISSUES_DATA=$(curl -s -H "Authorization: token $PAT" \
+            "https://api.github.com/search/issues?q=author:$USERNAME+type:issue" || echo '{"total_count":0}')
           
-          echo "Total Commits (recent): $TOTAL_COMMITS"
-          echo "Total PRs (recent): $TOTAL_PRS"
-          echo "Total Issues (recent): $TOTAL_ISSUES"
+          PRS_DATA=$(curl -s -H "Authorization: token $PAT" \
+            "https://api.github.com/search/issues?q=author:$USERNAME+type:pr" || echo '{"total_count":0}')
           
-          # Contar repositórios onde contribuiu (não próprios, últimos eventos)
-          CONTRIBUTED_TO=$(echo "$EVENTS_DATA" | jq --arg username "$USERNAME" \
+          TOTAL_ISSUES=$(echo "$ISSUES_DATA" | jq '.total_count // 0')
+          TOTAL_PRS=$(echo "$PRS_DATA" | jq '.total_count // 0')
+          
+          echo "Total Issues (all time): $TOTAL_ISSUES"
+          echo "Total PRs (all time): $TOTAL_PRS"
+          
+          # Buscar repositórios onde contribuiu (que não são seus)
+          echo "Fetching contributed repositories..."
+          CONTRIB_EVENTS=$(curl -s -H "Authorization: token $PAT" \
+            "https://api.github.com/users/$USERNAME/events?per_page=100" || echo '[]')
+          
+          CONTRIBUTED_TO=$(echo "$CONTRIB_EVENTS" | jq --arg username "$USERNAME" \
             '[.[] | select(.repo.name | contains($username + "/") | not)] | 
             unique_by(.repo.name) | length // 0')
           
-          echo "Contributed to (recent): $CONTRIBUTED_TO"
+          echo "Contributed to (repos): $CONTRIBUTED_TO"
           
-          # Salvar dados básicos
+          # Salvar dados
           echo "$TOTAL_STARS" > total_stars.txt
           echo "$TOTAL_COMMITS" > total_commits.txt
           echo "$TOTAL_PRS" > total_prs.txt
@@ -92,9 +118,9 @@ jobs:
           # Buscar linguagens detalhadas de cada repositório
           echo '{}' > all_languages.json
           
-          echo "$REPOS_DATA" | jq -r '.[].name' | head -20 | while read -r repo_name; do
+          echo "$REPOS_DATA" | jq -r '.[].name' | while read -r repo_name; do
             if [ ! -z "$repo_name" ]; then
-              echo "Processing repository: $repo_name"
+              echo "Processing languages for: $repo_name"
               LANG_DATA=$(curl -s -H "Authorization: token $PAT" \
                 "https://api.github.com/repos/$USERNAME/$repo_name/languages" || echo '{}')
               
@@ -102,12 +128,18 @@ jobs:
               jq -s '.[0] * .[1]' all_languages.json <(echo "$LANG_DATA") > temp_langs.json
               mv temp_langs.json all_languages.json
               
-              # Pequena pausa para evitar rate limiting
               sleep 0.5
             fi
           done
           
-          echo "Language data collection complete"
+          echo "Data collection complete!"
+          echo "Summary:"
+          echo "  Stars: $TOTAL_STARS"
+          echo "  Forks: $TOTAL_FORKS"
+          echo "  Commits: $TOTAL_COMMITS"
+          echo "  PRs: $TOTAL_PRS"
+          echo "  Issues: $TOTAL_ISSUES"
+          echo "  Contributed: $CONTRIBUTED_TO"
 
       - name: Generate Modern Stats SVG
         run: |
@@ -189,8 +221,8 @@ jobs:
                 <text x="280" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
                   🚀 Contributed to:
                 </text>
-                <text x="450" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
-                  $CONTRIBUTED_TO
+                <text x="445" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
+                  $CONTRIBUTED_TO repos
                 </text>
               </g>
             </g>
