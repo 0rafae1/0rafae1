@@ -58,39 +58,70 @@ jobs:
           # Buscar commits totais de cada repositório
           echo "Calculating total commits from all repositories..."
           TOTAL_COMMITS=0
-          TOTAL_OPEN_ISSUES=0
-          CONTRIBUTED_REPOS=0
           
-          echo "$REPOS_DATA" | jq -r '.[] | "\(.name) \(.default_branch)"' | while read -r repo_name default_branch; do
+          # Usar process substitution para evitar subshell
+          while IFS= read -r line; do
+            repo_name=$(echo "$line" | jq -r '.name')
+            default_branch=$(echo "$line" | jq -r '.default_branch // "main"')
+            
             if [ ! -z "$repo_name" ] && [ "$repo_name" != "null" ]; then
               echo "Processing commits for: $repo_name (branch: $default_branch)"
               
-              # Buscar total de commits no branch principal
-              COMMITS_API=$(curl -s -H "Authorization: token $PAT" \
-                "https://api.github.com/repos/$USERNAME/$repo_name/commits?per_page=1&sha=$default_branch" || echo "[]")
+              # Buscar commits do repositório (pega apenas 1 para verificar)
+              COMMITS_RESPONSE=$(curl -s -I -H "Authorization: token $PAT" \
+                "https://api.github.com/repos/$USERNAME/$repo_name/commits?per_page=1&sha=$default_branch" 2>/dev/null || echo "")
               
-              # Pegar o total de commits do header Link (se disponível)
-              REPO_COMMITS=$(echo "$COMMITS_API" | jq 'if type == "array" then length else 0 end')
-              
-              if [ "$REPO_COMMITS" -gt 0 ]; then
-                TOTAL_COMMITS=$((TOTAL_COMMITS + REPO_COMMITS))
-                echo "  → Found commits in $repo_name"
+              # Extrair total de páginas do header Link
+              if echo "$COMMITS_RESPONSE" | grep -q "Link:"; then
+                # Pegar o número da última página que é o total de commits
+                LAST_PAGE=$(echo "$COMMITS_RESPONSE" | grep -i "^link:" | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p')
+                
+                if [ ! -z "$LAST_PAGE" ] && [ "$LAST_PAGE" -gt 0 ]; then
+                  TOTAL_COMMITS=$((TOTAL_COMMITS + LAST_PAGE))
+                  echo "  → $LAST_PAGE commits found in $repo_name"
+                else
+                  # Se não tem paginação, tem apenas 1 commit ou nenhum
+                  SINGLE_COMMIT=$(curl -s -H "Authorization: token $PAT" \
+                    "https://api.github.com/repos/$USERNAME/$repo_name/commits?per_page=1&sha=$default_branch" | jq 'length')
+                  
+                  if [ "$SINGLE_COMMIT" -gt 0 ]; then
+                    TOTAL_COMMITS=$((TOTAL_COMMITS + 1))
+                    echo "  → 1 commit found in $repo_name"
+                  fi
+                fi
+              else
+                # Fallback: tentar contar diretamente
+                REPO_COMMITS=$(curl -s -H "Authorization: token $PAT" \
+                  "https://api.github.com/repos/$USERNAME/$repo_name/commits?per_page=100&sha=$default_branch" | jq 'length')
+                
+                if [ "$REPO_COMMITS" -gt 0 ]; then
+                  TOTAL_COMMITS=$((TOTAL_COMMITS + REPO_COMMITS))
+                  echo "  → $REPO_COMMITS commits found in $repo_name"
+                fi
               fi
               
-              sleep 0.3
+              sleep 0.4
             fi
-          done
+          done < <(echo "$REPOS_DATA" | jq -c '.[]')
+          
+          echo "Total commits calculated: $TOTAL_COMMITS"
           
           # Buscar issues e PRs totais
           echo "Fetching issues and pull requests..."
+          
+          echo "Searching for issues created by $USERNAME..."
           ISSUES_DATA=$(curl -s -H "Authorization: token $PAT" \
             "https://api.github.com/search/issues?q=author:$USERNAME+type:issue" || echo '{"total_count":0}')
           
+          echo "Searching for PRs created by $USERNAME..."
           PRS_DATA=$(curl -s -H "Authorization: token $PAT" \
             "https://api.github.com/search/issues?q=author:$USERNAME+type:pr" || echo '{"total_count":0}')
           
           TOTAL_ISSUES=$(echo "$ISSUES_DATA" | jq '.total_count // 0')
           TOTAL_PRS=$(echo "$PRS_DATA" | jq '.total_count // 0')
+          
+          echo "Issues API response: $(echo "$ISSUES_DATA" | jq -c '.')"
+          echo "PRs API response: $(echo "$PRS_DATA" | jq -c '.')"
           
           echo "Total Issues (all time): $TOTAL_ISSUES"
           echo "Total PRs (all time): $TOTAL_PRS"
