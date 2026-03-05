@@ -286,7 +286,7 @@ jobs:
             
             <!-- Footer com data -->
             <text x="25" y="185" style="fill:#484f58; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:10px;">
-              Last updated: $(date +'%d/%m/%Y %H:%M UTC')
+              Last updated: $(TZ='America/Sao_Paulo' date +'%d/%m/%Y %H:%M BRT')
             </text>
           </svg>
           EOF
@@ -414,14 +414,18 @@ jobs:
           fi
           
           # Fechar SVG
-          cat >> assets/github-langs.svg << 'EOF'
+          CURRENT_DATE=$(TZ='America/Sao_Paulo' date +'%d/%m/%Y %H:%M BRT')
+          cat >> assets/github-langs.svg << EOF
             
             <!-- Footer -->
             <text x="25" y="305" style="fill:#484f58; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:10px;">
-              Last updated: $(date +'%d/%m/%Y %H:%M UTC')
+              Last updated: $CURRENT_DATE
             </text>
           </svg>
           EOF
+          
+          echo "SVG generation complete!"
+          echo "Last updated timestamp: $CURRENT_DATE"
 
       - name: Clean up temporary files
         run: |
