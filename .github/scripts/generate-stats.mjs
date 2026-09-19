@@ -93,9 +93,7 @@ const MAIN_QUERY = `
       ) {
         nodes {
           name
-          stargazers {
-            totalCount
-          }
+          stargazerCount
           forkCount
           languages(first: 10, orderBy: { field: SIZE, direction: DESC }) {
             edges {
@@ -249,7 +247,7 @@ async function main() {
     throw new Error(`User "${USERNAME}" not found (check GH_USERNAME).`);
   }
 
-  const totalStars = user.repositories.nodes.reduce((sum, r) => sum + r.stargazers.totalCount, 0);
+  const totalStars = user.repositories.nodes.reduce((sum, r) => sum + r.stargazerCount, 0);
   const totalForks = user.repositories.nodes.reduce((sum, r) => sum + r.forkCount, 0);
   const totalPRs = user.pullRequests.totalCount;
   const totalIssues = user.issues.totalCount;
