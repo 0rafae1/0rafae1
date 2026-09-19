@@ -10,7 +10,7 @@
  *   GH_USERNAME - the GitHub username to report on
  */
 
-import { writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdirSync, readFileSync } from "node:fs";
 
 const TOKEN = process.env.GH_TOKEN;
 const USERNAME = process.env.GH_USERNAME;
@@ -93,7 +93,9 @@ const MAIN_QUERY = `
       ) {
         nodes {
           name
-          stargazerCount
+          stargazers {
+            totalCount
+          }
           forkCount
           languages(first: 10, orderBy: { field: SIZE, direction: DESC }) {
             edges {
@@ -153,88 +155,96 @@ const LANG_COLORS = {
   Vue: "#4fc08d",
 };
 
+// --- Template-based rendering -----------------------------------------
+// Loads the Figma-exported SVG templates and swaps values/colors/widths by
+// element id, leaving every other path (labels, icons, background) exactly
+// as designed in Figma.
+
+const STATS_TEMPLATE_PATH = "assets/templates/github-stats-template.svg";
+const LANGS_TEMPLATE_PATH = "assets/templates/github-langs-template.svg";
+
+function setText(svg, id, value) {
+  const re = new RegExp(`(<text id="${id}"[^>]*>)([\\s\\S]*?)(</text>)`);
+  if (!re.test(svg)) throw new Error(`Template is missing id="${id}" (<text>)`);
+  return svg.replace(re, `$1${escapeXml(value)}$3`);
+}
+
+function setAttr(svg, id, attr, value) {
+  const re = new RegExp(`(<[a-zA-Z]+ id="${id}"[^>]*?\\s${attr}=")[^"]*(")`);
+  if (!re.test(svg)) throw new Error(`Template is missing id="${id}" with attribute "${attr}"`);
+  return svg.replace(re, `$1${value}$2`);
+}
+
 function writeStatsSvg({ username, totalStars, totalForks, totalCommits, totalPRs, totalIssues, contributedTo, timestamp }) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="500" height="200" viewBox="0 0 500 200">
-  <defs>
-    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#21262d;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#0d1117;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  <rect width="500" height="200" rx="10" fill="url(#cardGrad)" stroke="#ffffff" stroke-width="1"/>
-  <text x="25" y="40" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:26px; font-weight:600;">${escapeXml(username)}'s GitHub Stats</text>
-  <g style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-    <g transform="translate(25, 65)">
-      <text y="0" style="fill:#38BDAE; font-size:16px; font-weight:bold;">⭐ Total Stars Earned:</text>
-      <text x="200" y="0" style="fill:#f0f6fc; font-size:14px; font-weight:600;">${totalStars}</text>
-      <text x="280" y="0" style="fill:#38BDAE; font-size:16px; font-weight:bold;">🔗 Total Forks:</text>
-      <text x="410" y="0" style="fill:#f0f6fc; font-size:14px; font-weight:600;">${totalForks}</text>
-    </g>
-    <g transform="translate(25, 90)">
-      <text y="0" style="fill:#38BDAE; font-size:16px; font-weight:bold;">📝 Total Commits:</text>
-      <text x="200" y="0" style="fill:#f0f6fc; font-size:14px; font-weight:600;">${totalCommits}</text>
-      <text x="280" y="0" style="fill:#38BDAE; font-size:16px; font-weight:bold;">🔀 Total PRs:</text>
-      <text x="410" y="0" style="fill:#f0f6fc; font-size:14px; font-weight:600;">${totalPRs}</text>
-    </g>
-    <g transform="translate(25, 115)">
-      <text y="0" style="fill:#38BDAE; font-size:16px; font-weight:bold;">🐛 Total Issues:</text>
-      <text x="200" y="0" style="fill:#f0f6fc; font-size:14px; font-weight:600;">${totalIssues}</text>
-      <text x="280" y="0" style="fill:#38BDAE; font-size:16px; font-weight:bold;">🚀 Contributed to:</text>
-      <text x="445" y="0" style="fill:#f0f6fc; font-size:14px; font-weight:600;">${contributedTo} repos</text>
-    </g>
-  </g>
-  <text x="25" y="185" style="fill:#484f58; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:10px;">Last updated: ${timestamp}</text>
-</svg>
-`;
+  let svg = readFileSync(STATS_TEMPLATE_PATH, "utf8");
+  svg = setText(svg, "total-stars", String(totalStars));
+  svg = setText(svg, "total-forks", String(totalForks));
+  svg = setText(svg, "total-commits", String(totalCommits));
+  svg = setText(svg, "total-prs", String(totalPRs));
+  svg = setText(svg, "total-issues", String(totalIssues));
+  svg = setText(svg, "contributed-to", `${contributedTo} repos`);
+  svg = setText(svg, "last-updated", `Last updated: ${timestamp}`);
   writeFileSync("assets/github-stats.svg", svg);
 }
 
 function writeLangsSvg({ topLangs, timestamp }) {
-  const barWidth = 450;
-  let currentX = 0;
-  const bars = topLangs
-    .map((l) => {
-      const w = (l.percent / 100) * barWidth;
-      const rect = `<rect x="${currentX.toFixed(2)}" y="0" width="${w.toFixed(2)}" height="12" fill="${l.color}" rx="6"/>`;
-      currentX += w;
-      return rect;
-    })
-    .join("\n    ");
+  let svg = readFileSync(LANGS_TEMPLATE_PATH, "utf8");
 
-  const rows = topLangs
-    .map(
-      (l, i) => `
-  <g transform="translate(25, ${180 + i * 35})">
-    <circle cx="8" cy="0" r="6" fill="${l.color}"/>
-    <text x="25" y="5" style="fill:#38bdae; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:24px; font-weight:500;">${escapeXml(l.name)}</text>
-    <text x="400" y="5" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:20px;">${l.percent.toFixed(1)}%</text>
-  </g>`
-    )
-    .join("\n");
+  const MAX_ROWS = 5;
+  const BAR_START_X = 22;
+  const BAR_WIDTH = 323; // matches the template's bar track (x 22 to 345)
+  const ROW_CY_START = 114; // first row's dot/text vertical center, from the template
+  const ROW_SPACING = 21.5; // vertical gap between rows, from the template
 
-  const noData = topLangs.length
-    ? ""
-    : `<text x="25" y="150" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:18px;">No language data available</text>`;
+  const shown = topLangs.slice(0, MAX_ROWS);
+  const hidden = topLangs.slice(MAX_ROWS);
 
-  const height = 320 + Math.max(0, topLangs.length - 5) * 35;
+  let barX = BAR_START_X;
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="500" height="${height}" viewBox="0 0 500 ${height}">
-  <defs>
-    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#21262d;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#0d1117;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  <rect width="500" height="${height}" rx="10" fill="url(#cardGrad)" stroke="#ffffff" stroke-width="1"/>
-  <text x="25" y="50" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:36px; font-weight:600;">Most Used Languages</text>
-  <g transform="translate(25, 120)">
-    ${bars}
-  </g>
-  ${rows}
-  ${noData}
-  <text x="25" y="${height - 15}" style="fill:#484f58; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:10px;">Last updated: ${timestamp}</text>
-</svg>
-`;
+  for (let slot = 1; slot <= MAX_ROWS; slot++) {
+    const lang = shown[slot - 1];
+    const hasLang = Boolean(lang);
+    const cy = ROW_CY_START + (slot - 1) * ROW_SPACING;
+    const color = hasLang ? lang.color : "none"; // "none" hides the dot for an unused slot
+    const width = hasLang ? (lang.percent / 100) * BAR_WIDTH : 0;
+
+    svg = setText(svg, `lang${slot}-name`, hasLang ? lang.name : "");
+    svg = setText(svg, `lang${slot}-pct`, hasLang ? `${lang.percent.toFixed(1)}%` : "");
+    svg = setAttr(svg, `lang${slot}-name`, "y", (cy + 4).toFixed(1));
+    svg = setAttr(svg, `lang${slot}-pct`, "y", (cy + 6).toFixed(1));
+    svg = setAttr(svg, `lang${slot}-dot`, "cy", cy.toFixed(1));
+    svg = setAttr(svg, `lang${slot}-dot`, "fill", color);
+    svg = setAttr(svg, `lang${slot}-bar`, "fill", hasLang ? lang.color : "none");
+    svg = setAttr(svg, `lang${slot}-bar`, "x", barX.toFixed(2));
+    svg = setAttr(svg, `lang${slot}-bar`, "width", width.toFixed(2));
+
+    barX += width;
+  }
+
+  // Vertical position right after the last visible row
+  const lastRowCy = ROW_CY_START + (shown.length - 1) * ROW_SPACING;
+  let cursorY = lastRowCy;
+
+  if (hidden.length > 0) {
+    const names = hidden.map((l) => l.name).join(", ");
+    cursorY += ROW_SPACING;
+    svg = setText(svg, "more-langs", `+${hidden.length} outras: ${names}`);
+    svg = setAttr(svg, "more-langs", "y", (cursorY + 4).toFixed(1));
+  } else {
+    svg = setText(svg, "more-langs", "");
+  }
+
+  const footerY = cursorY + 30;
+  const cardHeight = Math.round(footerY + 14);
+
+  svg = setText(svg, "last-updated", `Last updated: ${timestamp}`);
+  svg = setAttr(svg, "last-updated", "y", footerY.toFixed(1));
+
+  svg = setAttr(svg, "root-svg", "height", String(cardHeight));
+  svg = setAttr(svg, "root-svg", "viewBox", `0 0 367 ${cardHeight}`);
+  svg = setAttr(svg, "card-bg", "height", String(cardHeight - 1));
+  svg = setAttr(svg, "clip-rect", "height", String(cardHeight));
+
   writeFileSync("assets/github-langs.svg", svg);
 }
 
@@ -247,7 +257,7 @@ async function main() {
     throw new Error(`User "${USERNAME}" not found (check GH_USERNAME).`);
   }
 
-  const totalStars = user.repositories.nodes.reduce((sum, r) => sum + r.stargazerCount, 0);
+  const totalStars = user.repositories.nodes.reduce((sum, r) => sum + r.stargazers.totalCount, 0);
   const totalForks = user.repositories.nodes.reduce((sum, r) => sum + r.forkCount, 0);
   const totalPRs = user.pullRequests.totalCount;
   const totalIssues = user.issues.totalCount;
@@ -284,7 +294,7 @@ async function main() {
   const totalBytes = Object.values(langTotals).reduce((a, b) => a + b, 0) || 1;
   const topLangs = Object.entries(langTotals)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
+    .slice(0, 12) // keep a reasonable pool; the card shows up to 5 rows + a "+N outras" summary
     .map(([name, bytes]) => ({
       name,
       percent: (bytes / totalBytes) * 100,

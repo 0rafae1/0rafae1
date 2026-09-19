@@ -5,11 +5,12 @@ on:
     branches: ["main"]
   workflow_dispatch:
   schedule:
-  - cron: "0 6 * * *" # daily at 06:00 UTC (03:00 BRT)
+    - cron: "0 6 * * *" # diariamente às 06:00 UTC (03:00 BRT)
 
-# contents: allows the job to commit/push SVGs using the default GITHUB_TOKEN
-# (never expires, generated fresh on every run).
-# issues: allows automatically opening/closing an issue alert if the workflow fails. 
+# contents: para o job poder commitar/dar push nos SVGs com o GITHUB_TOKEN
+# padrão (nunca expira, é gerado novo a cada execução).
+# issues: para poder abrir/fechar automaticamente um aviso caso o workflow
+# falhe - assim você fica sabendo sem precisar checar o Actions manualmente.
 permissions:
   contents: write
   issues: write
@@ -37,14 +38,15 @@ jobs:
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add assets/
           if ! git diff --staged --quiet; then
-            git commit -m "🤖 Auto-update GitHub stats [skip ci]"
+            git commit -m "chore: update GitHub stats [skip ci]"
             git push
           else
             echo "No changes to commit"
           fi
 
-      # If any step above fails, open (or comment on an existing)
-      # issue notifying about the failure, instead of leaving the card outdated without notice.
+      # Se qualquer step acima falhar, abre (ou comenta numa já existente)
+      # uma Issue avisando, em vez de deixar o card ficar desatualizado em
+      # silêncio até alguém notar.
       - name: File an issue on failure
         if: failure()
         uses: actions/github-script@v7
@@ -78,8 +80,8 @@ jobs:
               });
             }
 
-      # If a failure issue was open and this run succeeds,
-      # comment and automatically close it.
+      # Se tinha uma Issue de falha aberta e essa execução deu certo,
+      # comenta e fecha sozinha.
       - name: Close failure issue on success
         if: success()
         uses: actions/github-script@v7
