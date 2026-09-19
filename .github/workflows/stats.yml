@@ -5,7 +5,18 @@ on:
     branches: ["main"]
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * *"
+  - cron: "0 6 * * *" # daily at 06:00 UTC (03:00 BRT)
+
+# contents: allows the job to commit/push SVGs using the default GITHUB_TOKEN
+# (never expires, generated fresh on every run).
+# issues: allows automatically opening/closing an issue alert if the workflow fails. 
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: stats-update
+  cancel-in-progress: true
 
 jobs:
   generate-stats:
@@ -13,426 +24,14 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PAT_1 }}
 
-      - name: Create assets directory
-        run: mkdir -p assets
+      - name: Generate stats SVGs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_USERNAME: 0rafae1
+        run: node .github/scripts/generate-stats.mjs
 
-      - name: Install dependencies with error handling
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq bc curl
-          echo "Dependencies installed successfully"
-
-      - name: Fetch GitHub Data with PAT authentication
-        run: |
-          PAT="${{ secrets.PAT_1 }}"
-          USERNAME="0rafae1"
-          
-          echo "Checking API rate limit..."
-          RATE_LIMIT=$(curl -s -H "Authorization: token $PAT" "https://api.github.com/rate_limit")
-          echo "$RATE_LIMIT" | jq '.rate'
-          
-          echo "Fetching user data..."
-          USER_DATA=$(curl -s -H "Authorization: token $PAT" \
-            "https://api.github.com/users/$USERNAME" || echo '{}')
-          
-          PUBLIC_REPOS=$(echo "$USER_DATA" | jq '.public_repos // 0')
-          echo "User has $PUBLIC_REPOS public repositories"
-          
-          echo "Fetching repositories..."
-          REPOS_DATA=$(curl -s -H "Authorization: token $PAT" \
-            "https://api.github.com/users/$USERNAME/repos?per_page=100&sort=updated&type=owner" || echo '[]')
-          
-          REPO_COUNT=$(echo "$REPOS_DATA" | jq 'length')
-          echo "Found $REPO_COUNT repositories"
-          
-          # Processar dados básicos (TOTAIS de todos os repos)
-          TOTAL_STARS=$(echo "$REPOS_DATA" | jq '[.[].stargazers_count] | add // 0')
-          TOTAL_FORKS=$(echo "$REPOS_DATA" | jq '[.[].forks_count] | add // 0')
-          
-          echo "Total Stars (all repos): $TOTAL_STARS"
-          echo "Total Forks (all repos): $TOTAL_FORKS"
-          
-          # Buscar commits totais de cada repositório
-          echo "Calculating total commits from all repositories..."
-          TOTAL_COMMITS=0
-          
-          # Usar process substitution para evitar subshell
-          while IFS= read -r line; do
-            repo_name=$(echo "$line" | jq -r '.name')
-            default_branch=$(echo "$line" | jq -r '.default_branch // "main"')
-            
-            if [ ! -z "$repo_name" ] && [ "$repo_name" != "null" ]; then
-              echo "Processing commits for: $repo_name (branch: $default_branch)"
-              
-              # Buscar commits do repositório (pega apenas 1 para verificar)
-              COMMITS_RESPONSE=$(curl -s -I -H "Authorization: token $PAT" \
-                "https://api.github.com/repos/$USERNAME/$repo_name/commits?per_page=1&sha=$default_branch" 2>/dev/null || echo "")
-              
-              # Extrair total de páginas do header Link
-              if echo "$COMMITS_RESPONSE" | grep -q "Link:"; then
-                # Pegar o número da última página que é o total de commits
-                LAST_PAGE=$(echo "$COMMITS_RESPONSE" | grep -i "^link:" | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p')
-                
-                if [ ! -z "$LAST_PAGE" ] && [ "$LAST_PAGE" -gt 0 ]; then
-                  TOTAL_COMMITS=$((TOTAL_COMMITS + LAST_PAGE))
-                  echo "  → $LAST_PAGE commits found in $repo_name"
-                else
-                  # Se não tem paginação, tem apenas 1 commit ou nenhum
-                  SINGLE_COMMIT=$(curl -s -H "Authorization: token $PAT" \
-                    "https://api.github.com/repos/$USERNAME/$repo_name/commits?per_page=1&sha=$default_branch" | jq 'length')
-                  
-                  if [ "$SINGLE_COMMIT" -gt 0 ]; then
-                    TOTAL_COMMITS=$((TOTAL_COMMITS + 1))
-                    echo "  → 1 commit found in $repo_name"
-                  fi
-                fi
-              else
-                # Fallback: tentar contar diretamente
-                REPO_COMMITS=$(curl -s -H "Authorization: token $PAT" \
-                  "https://api.github.com/repos/$USERNAME/$repo_name/commits?per_page=100&sha=$default_branch" | jq 'length')
-                
-                if [ "$REPO_COMMITS" -gt 0 ]; then
-                  TOTAL_COMMITS=$((TOTAL_COMMITS + REPO_COMMITS))
-                  echo "  → $REPO_COMMITS commits found in $repo_name"
-                fi
-              fi
-              
-              sleep 0.4
-            fi
-          done < <(echo "$REPOS_DATA" | jq -c '.[]')
-          
-          echo "Total commits calculated: $TOTAL_COMMITS"
-          
-          # Buscar issues e PRs totais
-          echo "Fetching issues and pull requests..."
-          
-          echo "Searching for issues created by $USERNAME..."
-          ISSUES_DATA=$(curl -s -H "Authorization: token $PAT" \
-            "https://api.github.com/search/issues?q=author:$USERNAME+type:issue" || echo '{"total_count":0}')
-          
-          echo "Searching for PRs created by $USERNAME..."
-          PRS_DATA=$(curl -s -H "Authorization: token $PAT" \
-            "https://api.github.com/search/issues?q=author:$USERNAME+type:pr" || echo '{"total_count":0}')
-          
-          TOTAL_ISSUES=$(echo "$ISSUES_DATA" | jq '.total_count // 0')
-          TOTAL_PRS=$(echo "$PRS_DATA" | jq '.total_count // 0')
-          
-          echo "Issues API response: $(echo "$ISSUES_DATA" | jq -c '.')"
-          echo "PRs API response: $(echo "$PRS_DATA" | jq -c '.')"
-          
-          echo "Total Issues (all time): $TOTAL_ISSUES"
-          echo "Total PRs (all time): $TOTAL_PRS"
-          
-          # Buscar repositórios onde contribuiu (que não são seus)
-          echo "Fetching contributed repositories..."
-          CONTRIB_EVENTS=$(curl -s -H "Authorization: token $PAT" \
-            "https://api.github.com/users/$USERNAME/events?per_page=100" || echo '[]')
-          
-          CONTRIBUTED_TO=$(echo "$CONTRIB_EVENTS" | jq --arg username "$USERNAME" \
-            '[.[] | select(.repo.name | contains($username + "/") | not)] | 
-            unique_by(.repo.name) | length // 0')
-          
-          echo "Contributed to (repos): $CONTRIBUTED_TO"
-          
-          # Salvar dados
-          echo "$TOTAL_STARS" > total_stars.txt
-          echo "$TOTAL_COMMITS" > total_commits.txt
-          echo "$TOTAL_PRS" > total_prs.txt
-          echo "$TOTAL_ISSUES" > total_issues.txt
-          echo "$CONTRIBUTED_TO" > contributed_to.txt
-          echo "$TOTAL_FORKS" > total_forks.txt
-          
-          echo "Fetching detailed language data..."
-          # Buscar linguagens detalhadas de cada repositório
-          echo '{}' > all_languages.json
-          
-          TOTAL_REPOS_WITH_CODE=0
-          
-          echo "$REPOS_DATA" | jq -r '.[].name' | while read -r repo_name; do
-            if [ ! -z "$repo_name" ]; then
-              echo "Processing languages for: $repo_name"
-              LANG_DATA=$(curl -s -H "Authorization: token $PAT" \
-                "https://api.github.com/repos/$USERNAME/$repo_name/languages" || echo '{}')
-              
-              # Verificar se o repositório tem código
-              LANG_COUNT=$(echo "$LANG_DATA" | jq 'length')
-              
-              if [ "$LANG_COUNT" -gt 0 ]; then
-                echo "  ✓ Found $LANG_COUNT language(s) in $repo_name:"
-                echo "$LANG_DATA" | jq -r 'to_entries[] | "    - \(.key): \(.value) bytes"'
-                TOTAL_REPOS_WITH_CODE=$((TOTAL_REPOS_WITH_CODE + 1))
-              else
-                echo "  ✗ No code detected in $repo_name (empty or non-code repo)"
-              fi
-              
-              # Combinar com dados existentes
-              jq -s '.[0] * .[1]' all_languages.json <(echo "$LANG_DATA") > temp_langs.json
-              mv temp_langs.json all_languages.json
-              
-              sleep 0.5
-            fi
-          done
-          
-          echo ""
-          echo "Language aggregation summary:"
-          echo "  Repositories with code: $TOTAL_REPOS_WITH_CODE / $REPO_COUNT"
-          
-          # Mostrar totais agregados
-          LANG_TOTALS=$(cat all_languages.json)
-          TOTAL_BYTES=$(echo "$LANG_TOTALS" | jq '[.[]] | add // 0')
-          
-          echo "  Total bytes of code: $TOTAL_BYTES"
-          echo "  Language breakdown:"
-          echo "$LANG_TOTALS" | jq -r 'to_entries | sort_by(.value) | reverse | .[] | "    \(.key): \(.value) bytes (\((.value * 100.0 / '"$TOTAL_BYTES"' * 100) / 100)%)"'
-          
-          echo ""
-          echo "Data collection complete!"
-          echo "Summary:"
-          echo "  Stars: $TOTAL_STARS"
-          echo "  Forks: $TOTAL_FORKS"
-          echo "  Commits: $TOTAL_COMMITS"
-          echo "  PRs: $TOTAL_PRS"
-          echo "  Issues: $TOTAL_ISSUES"
-          echo "  Contributed: $CONTRIBUTED_TO"
-
-      - name: Generate Modern Stats SVG
-        run: |
-          # Ler dados
-          TOTAL_STARS=$(cat total_stars.txt || echo "0")
-          TOTAL_COMMITS=$(cat total_commits.txt || echo "0")
-          TOTAL_PRS=$(cat total_prs.txt || echo "0")
-          TOTAL_ISSUES=$(cat total_issues.txt || echo "0")
-          CONTRIBUTED_TO=$(cat contributed_to.txt || echo "0")
-          TOTAL_FORKS=$(cat total_forks.txt || echo "0")
-          
-          # Criar SVG moderno com design semelhante ao exemplo
-          cat > assets/github-stats.svg << EOF
-          <svg xmlns="http://www.w3.org/2000/svg" width="500" height="200" viewBox="0 0 500 200">
-            <defs>
-              <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#58a6ff;stop-opacity:0.8" />
-                <stop offset="100%" style="stop-color:#1f6feb;stop-opacity:0.6" />
-              </linearGradient>
-              <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#21262d;stop-opacity:1" />
-                <stop offset="100%" style="stop-color:#0d1117;stop-opacity:1" />
-              </linearGradient>
-            </defs>
-            
-            <!-- Background com borda branca -->
-            <rect width="500" height="200" rx="10" fill="url(#cardGrad)" stroke="#ffffff" stroke-width="1"/>
-            
-            <!-- Título -->
-            <text x="25" y="40" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:26px; font-weight:600;">
-              0rafae1's GitHub Stats
-            </text>
-            
-            <!-- Estatísticas em grid -->
-            <g transform="translate(25, 65)">
-              <!-- Primeira linha -->
-              <g>
-                <text y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
-                  ⭐ Total Stars Earned:
-                </text>
-                <text x="200" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
-                  $TOTAL_STARS
-                </text>
-                
-                <text x="280" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
-                  🔗 Total Forks:
-                </text>
-                <text x="410" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
-                  $TOTAL_FORKS
-                </text>
-              </g>
-              
-              <!-- Segunda linha -->
-              <g transform="translate(0, 25)">
-                <text y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
-                  📝 Total Commits:
-                </text>
-                <text x="200" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
-                  $TOTAL_COMMITS
-                </text>
-                
-                <text x="280" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
-                  🔀 Total PRs:
-                </text>
-                <text x="410" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
-                  $TOTAL_PRS
-                </text>
-              </g>
-              
-              <!-- Terceira linha -->
-              <g transform="translate(0, 50)">
-                <text y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
-                  🐛 Total Issues:
-                </text>
-                <text x="200" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
-                  $TOTAL_ISSUES
-                </text>
-                
-                <text x="280" y="0" style="fill:#38BDAE; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:16px; font-weight:bold;">
-                  🚀 Contributed to:
-                </text>
-                <text x="445" y="0" style="fill:#f0f6fc; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:14px; font-weight:600;">
-                  $CONTRIBUTED_TO repos
-                </text>
-              </g>
-            </g>
-            
-            <!-- Footer com data -->
-            <text x="25" y="185" style="fill:#484f58; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:10px;">
-              Last updated: $(TZ='America/Sao_Paulo' date +'%d/%m/%Y %H:%M BRT')
-            </text>
-          </svg>
-          EOF
-
-      - name: Generate Modern Languages SVG
-        run: |
-          # Processar dados de linguagens
-          LANG_DATA=$(cat all_languages.json || echo '{}')
-          
-          echo "Validating language data..."
-          LANG_COUNT=$(echo "$LANG_DATA" | jq 'length')
-          echo "Total unique languages found: $LANG_COUNT"
-          
-          if [ "$LANG_COUNT" -eq 0 ]; then
-            echo "WARNING: No language data found! SVG will show 'No data available'"
-          fi
-          
-          # Calcular total de bytes
-          TOTAL_BYTES=$(echo "$LANG_DATA" | jq '[.[]] | add // 1')
-          echo "Total bytes across all languages: $TOTAL_BYTES"
-          
-          # Criar array de linguagens ordenado (top 5)
-          LANGS_ARRAY=$(echo "$LANG_DATA" | jq -r 'to_entries | sort_by(.value) | reverse | .[0:5] | .[] | "\(.key) \(.value)"')
-          
-          echo "Top 5 languages selected for display:"
-          echo "$LANG_DATA" | jq -r 'to_entries | sort_by(.value) | reverse | .[0:5] | .[] | "  \(.key): \(.value) bytes"'
-          
-          # Criar SVG de linguagens moderno
-          cat > assets/github-langs.svg << 'EOF'
-          <svg xmlns="http://www.w3.org/2000/svg" width="500" height="320" viewBox="0 0 500 320">
-            <defs>
-              <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#21262d;stop-opacity:1" />
-                <stop offset="100%" style="stop-color:#0d1117;stop-opacity:1" />
-              </linearGradient>
-            </defs>
-            
-            <!-- Background com borda branca -->
-            <rect width="500" height="320" rx="10" fill="url(#cardGrad)" stroke="#ffffff" stroke-width="1"/>
-            
-            <!-- Título -->
-            <text x="25" y="50" style="fill:#58a6ff; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:36px; font-weight:600;">
-              Most Used Languages
-            </text>
-          EOF
-          
-          # Definir cores das linguagens
-          declare -A colors=(
-            ["JavaScript"]="#f1e05a"
-            ["TypeScript"]="#3178c6"
-            ["HTML"]="#e34c26"
-            ["CSS"]="#563d7c"
-            ["Python"]="#3572A5"
-            ["Java"]="#b07219"
-            ["PHP"]="#4F5D95"
-            ["Ruby"]="#701516"
-            ["C++"]="#f34b7d"
-            ["C"]="#555555"
-            ["Shell"]="#89e051"
-            ["Dockerfile"]="#384d54"
-            ["Vue"]="#4fc08d"
-            ["React"]="#61dafb"
-          )
-          
-          # Criar barra de progresso das linguagens
-          if [ ! -z "$LANGS_ARRAY" ]; then
-            echo "Generating language progress bar..."
-            # Calcular posições para a barra
-            echo "            <!-- Barra de linguagens -->" >> assets/github-langs.svg
-            echo "            <g transform=\"translate(25, 120)\">" >> assets/github-langs.svg
-            
-            current_x=0
-            total_width=450
-            
-            echo "$LANGS_ARRAY" | while IFS=' ' read -r language bytes; do
-              if [ ! -z "$language" ] && [ ! -z "$bytes" ]; then
-                percent=$(echo "scale=4; ($bytes / $TOTAL_BYTES) * 100" | bc 2>/dev/null || echo "0")
-                width=$(echo "scale=2; ($percent / 100) * $total_width" | bc 2>/dev/null || echo "0")
-                color=${colors[$language]:-"#58a6ff"}
-                
-                echo "  $language: ${percent}% of total code ($width px width)"
-                
-                if (( $(echo "$width > 5" | bc -l) )); then
-                  echo "              <rect x=\"$current_x\" y=\"0\" width=\"$width\" height=\"12\" fill=\"$color\" rx=\"6\"/>" >> assets/github-langs.svg
-                else
-                  echo "  (too small to display in bar, min width is 5px)"
-                fi
-                
-                current_x=$(echo "$current_x + $width" | bc)
-              fi
-            done
-            
-            echo "            </g>" >> assets/github-langs.svg
-          else
-            echo "WARNING: No language data to generate progress bar"
-          fi
-          
-          # Adicionar linguagens ao SVG
-          y_pos=180
-          if [ ! -z "$LANGS_ARRAY" ]; then
-            echo "Generating language list..."
-            echo "$LANGS_ARRAY" | while IFS=' ' read -r language bytes; do
-              if [ ! -z "$language" ] && [ ! -z "$bytes" ]; then
-                percent=$(echo "scale=2; ($bytes / $TOTAL_BYTES) * 100" | bc 2>/dev/null || echo "0")
-                color=${colors[$language]:-"#58a6ff"}
-                
-                echo "  Adding: $language (${percent}%)"
-                
-                cat >> assets/github-langs.svg << EOF
-            
-            <!-- $language -->
-            <g transform="translate(25, $y_pos)">
-              <circle cx="8" cy="0" r="6" fill="$color"/>
-              <text x="25" y="5" style="fill:#38bdae; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:24px; font-weight:500;">
-                $language
-              </text>
-              <text x="400" y="5" style="fill:#7d8590; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:20px;">
-                ${percent}%
-              </text>
-            </g>
-          EOF
-                y_pos=$((y_pos + 35))
-              fi
-            done
-          fi
-          
-          # Fechar SVG
-          CURRENT_DATE=$(TZ='America/Sao_Paulo' date +'%d/%m/%Y %H:%M BRT')
-          cat >> assets/github-langs.svg << EOF
-            
-            <!-- Footer -->
-            <text x="25" y="305" style="fill:#484f58; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:10px;">
-              Last updated: $CURRENT_DATE
-            </text>
-          </svg>
-          EOF
-          
-          echo "SVG generation complete!"
-          echo "Last updated timestamp: $CURRENT_DATE"
-
-      - name: Clean up temporary files
-        run: |
-          rm -f total_*.txt contributed_to.txt all_languages.json temp_langs.json
-          echo "Temporary files cleaned up successfully"
-
-      - name: Commit and Push results
+      - name: Commit and push if changed
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -443,3 +42,68 @@ jobs:
           else
             echo "No changes to commit"
           fi
+
+      # If any step above fails, open (or comment on an existing)
+      # issue notifying about the failure, instead of leaving the card outdated without notice.
+      - name: File an issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = "🚨 GitHub Stats workflow failing";
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "stats-workflow",
+            });
+            const existing = issues.find((i) => i.title === title);
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = `A execução falhou. Veja o log: ${runUrl}`;
+
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["stats-workflow"],
+              });
+            }
+
+      # If a failure issue was open and this run succeeds,
+      # comment and automatically close it.
+      - name: Close failure issue on success
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = "🚨 GitHub Stats workflow failing";
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "stats-workflow",
+            });
+            const existing = issues.find((i) => i.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: "✅ Voltou a funcionar - fechando automaticamente.",
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                state: "closed",
+              });
+            }
